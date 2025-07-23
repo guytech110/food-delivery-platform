@@ -1,0 +1,229 @@
+import BottomNavigation from "../components/BottomNavigation";
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+
+export default function Index() {
+  const navigate = useNavigate();
+  const { cook, logout, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to logout",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    navigate("/login");
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-white font-urbanist pb-[85px]">
+      {/* Header */}
+      <div className="w-full h-[170px] bg-gradient-to-b from-[rgba(80,186,108,0.50)] to-[rgba(80,186,108,0.00)] relative">
+        <div className="absolute left-5 top-[60px] right-20 pr-2">
+          <h1 className="text-2xl font-semibold text-[#191919]">
+            Welcome back, {cook?.name || 'Cook'}!
+          </h1>
+          <p className="text-[#5e5e5e] text-base mt-1">
+            Ready to add some delicious items to your menu?
+          </p>
+        </div>
+
+        {/* Profile Icon with Logout */}
+        <div className="absolute right-5 top-[60px] flex items-center gap-2">
+          <button
+            onClick={handleLogout}
+            className="px-3 py-2 text-sm text-[#00955d] font-medium"
+          >
+            Logout
+          </button>
+          <button
+            onClick={() => navigate("/profile")}
+            className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21"
+                stroke="#00955d"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12 11C14.2091 11 16 9.20914 16 7C16 4.79086 14.2091 3 12 3C9.79086 3 8 4.79086 8 7C8 9.20914 9.79086 11 12 11Z"
+                stroke="#00955d"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="px-5 pt-[40px] pb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="bg-[#f8f9fa] rounded-[16px] p-4 text-center">
+            <div className="text-2xl font-bold text-[#00955d] mb-1">0</div>
+            <div className="text-sm text-[#5e5e5e]">Menu Items</div>
+          </div>
+          <div className="bg-[#f8f9fa] rounded-[16px] p-4 text-center">
+            <div className="text-2xl font-bold text-[#00955d] mb-1">0</div>
+            <div className="text-sm text-[#5e5e5e]">Orders Today</div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-[#191919] mb-4">
+            Quick Actions
+          </h2>
+
+          <button
+            onClick={() => navigate("/new-item")}
+            className="w-full bg-gradient-to-r from-[#abe57d] to-[#00955d] rounded-[16px] p-6 text-left mb-4"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-white text-lg font-semibold mb-1">
+                  Add New Menu Item
+                </h3>
+                <p className="text-white/90 text-sm">
+                  Start building your menu with delicious items
+                </p>
+              </div>
+              <div className="text-white">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 4.5V19.5M19.5 12H4.5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+            </div>
+          </button>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button 
+              onClick={() => navigate("/orders")}
+              className="bg-white border border-[#e6e6e6] rounded-[16px] p-4 text-left"
+            >
+              <div className="text-[#00955d] mb-2">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M3 7H21L19 2H5L3 7Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M3 7L5 17H19L21 7"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-[#191919] font-medium text-sm mb-1">
+                View Orders
+              </h3>
+              <p className="text-[#5e5e5e] text-xs">Check incoming orders</p>
+            </button>
+
+            <button className="bg-white border border-[#e6e6e6] rounded-[16px] p-4 text-left">
+              <div className="text-[#00955d] mb-2">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-[#191919] font-medium text-sm mb-1">
+                Reviews
+              </h3>
+              <p className="text-[#5e5e5e] text-xs">See customer feedback</p>
+            </button>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-[#191919] mb-4">
+            Recent Activity
+          </h2>
+          <div className="bg-[#f8f9fa] rounded-[16px] p-6 text-center">
+            <div className="text-[#5e5e5e] mb-2">
+              <svg
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="mx-auto"
+              >
+                <path
+                  d="M20 7L12 3L4 7M20 7L12 11M20 7V17L12 21M12 11L4 7M12 11V21M4 7V17L12 21"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h3 className="text-[#191919] font-medium mb-2">No activity yet</h3>
+            <p className="text-[#5e5e5e] text-sm">
+              Start by adding your first menu item to get things rolling!
+            </p>
+          </div>
+        </div>
+      </div>
+      <BottomNavigation />
+    </div>
+  );
+}

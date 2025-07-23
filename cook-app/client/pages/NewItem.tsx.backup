@@ -1,0 +1,499 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useMenu } from "@/contexts/MenuContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+
+const NewItem: React.FC = () => {
+  const navigate = useNavigate();
+  const { createMenuItem, isLoading } = useMenu();
+  const { cook } = useAuth();
+  const { toast } = useToast();
+  const [showSkipModal, setShowSkipModal] = useState(false);
+  const [formData, setFormData] = useState({
+    itemName: "",
+    description: "",
+    category: "",
+    menuSection: "",
+    pickupPrice: "",
+    deliveryPrice: "",
+  });
+  const [addOns, setAddOns] = useState([{ name: "", price: "" }]);
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+
+  const allergies = [
+    "Peanuts",
+    "Soybeans",
+    "Milk",
+    "Fish",
+    "Eggs",
+    "Crustacean Shellfish",
+    "Sesame",
+    "Wheat",
+    "Tree Nuts",
+  ];
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddOnChange = (index: number, field: string, value: string) => {
+    const newAddOns = [...addOns];
+    newAddOns[index] = { ...newAddOns[index], [field]: value };
+    setAddOns(newAddOns);
+  };
+
+  const addNewAddOn = () => {
+    setAddOns([...addOns, { name: "", price: "" }]);
+  };
+
+  const toggleAllergy = (allergy: string) => {
+    setSelectedAllergies((prev) =>
+      prev.includes(allergy)
+        ? prev.filter((a) => a !== allergy)
+        : [...prev, allergy],
+    );
+  };
+
+  const handleBack = () => {
+    setShowSkipModal(true);
+  };
+
+  const handleSkip = () => {
+    navigate("/dashboard");
+  };
+
+  const handleContinue = () => {
+    setShowSkipModal(false);
+  };
+
+  const handleSave = async () => {
+    if (!cook) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create menu items",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.itemName || !formData.category || !formData.pickupPrice) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const menuItemData = {
+        cookId: cook.id,
+        name: formData.itemName,
+        description: formData.description,
+        price: parseFloat(formData.pickupPrice),
+        category: formData.category,
+        isAvailable: true,
+        allergens: selectedAllergies,
+        preparationTime: 30, // Default 30 minutes
+      };
+
+      const result = await createMenuItem(menuItemData);
+      
+      if (result.success) {
+        toast({
+          title: "Success!",
+          description: "Menu item created successfully",
+        });
+        navigate("/dashboard");
+      } else {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create menu item",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancel = () => {
+    setShowSkipModal(true);
+  };
+
+  return (
+    <>
+      <div className="min-h-screen bg-white font-urbanist relative">
+        {/* Header with gradient background */}
+        <div className="w-full h-[170px] bg-gradient-to-b from-[rgba(80,186,108,0.50)] to-[rgba(80,186,108,0.00)] relative">
+          {/* Back button */}
+          <button
+            onClick={handleBack}
+            className="absolute left-5 top-[60px] inline-flex items-center gap-1 px-4 py-4 bg-white rounded-full shadow-[0px_3px_10px_0px_rgba(38,38,38,0.20)]"
+          >
+            <svg
+              width="20"
+              height="21"
+              viewBox="0 0 20 21"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M13.0896 4.91058C13.415 5.23602 13.415 5.76366 13.0896 6.08909L8.67884 10.4998L13.0896 14.9106C13.415 15.236 13.415 15.7637 13.0896 16.0891C12.7641 16.4145 12.2365 16.4145 11.9111 16.0891L6.91107 11.0891C6.58563 10.7637 6.58563 10.236 6.91107 9.91058L11.9111 4.91058C12.2365 4.58514 12.7641 4.58514 13.0896 4.91058Z"
+                fill="#414040"
+              />
+            </svg>
+            <span className="text-[#818181] text-lg font-roboto">Back</span>
+          </button>
+        </div>
+
+        {/* Title */}
+        <h1 className="absolute left-5 top-[143px] text-black text-4xl font-semibold capitalize">
+          New Item
+        </h1>
+
+        {/* Main Content */}
+        <div className="px-5 pt-[73px] pb-8 space-y-7">
+          {/* Image Upload Section */}
+          <div className="w-full h-[242px] bg-[#f2f2f2] border border-[#e6e6e6] rounded-[10px] flex flex-col items-center justify-center gap-5">
+            <svg
+              width="35"
+              height="34"
+              viewBox="0 0 35 34"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M7.4457 31.3042L21.8957 17.7042L28.6957 24.5042M7.4457 31.3042H24.4457C27.2624 31.3042 29.5457 29.0208 29.5457 26.2042V17.7042M7.4457 31.3042C4.62905 31.3042 2.3457 29.0208 2.3457 26.2042V9.20419C2.3457 6.38754 4.62905 4.10419 7.4457 4.10419H18.4957M27.8457 12.3125L27.8457 7.50419M27.8457 7.50419L27.8457 2.69586M27.8457 7.50419L23.0374 7.50419M27.8457 7.50419L32.654 7.50419M12.5457 11.7542C12.5457 13.1625 11.404 14.3042 9.9957 14.3042C8.58738 14.3042 7.4457 13.1625 7.4457 11.7542C7.4457 10.3459 8.58738 9.20419 9.9957 9.20419C11.404 9.20419 12.5457 10.3459 12.5457 11.7542Z"
+                stroke="#61646B"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <button className="px-6 py-5 border border-[#00955d] rounded-[14px] text-[#00955d] text-base font-semibold capitalize">
+              Select Image
+            </button>
+          </div>
+
+          {/* Form Fields */}
+          <div className="space-y-[10px]">
+            {/* Item Name */}
+            <div className="border border-[#afb1b6] rounded-[10px] p-3">
+              <label className="text-[#61646b] text-xs font-medium uppercase tracking-wider">
+                Item Name
+              </label>
+              <input
+                type="text"
+                value={formData.itemName}
+                onChange={(e) => handleInputChange("itemName", e.target.value)}
+                placeholder="Enter item name (Ex: Beef Burger)"
+                className="w-full text-base text-[#333] mt-1 border-none outline-none bg-transparent placeholder-[#afb1b6]"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="border border-[#afb1b6] rounded-[10px] p-3 h-[147px]">
+              <label className="text-[#61646b] text-xs font-medium uppercase tracking-wider">
+                Description "Optional"
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
+                placeholder="Enter description..."
+                className="w-full h-full text-base text-[#333] mt-1 border-none outline-none bg-transparent placeholder-[#afb1b6] resize-none"
+              />
+            </div>
+
+            {/* Category */}
+            <div className="border border-[#afb1b6] rounded-[10px] p-3">
+              <label className="text-[#61646b] text-xs font-medium uppercase tracking-wider">
+                Set Category
+              </label>
+              <input
+                type="text"
+                value={formData.category}
+                onChange={(e) => handleInputChange("category", e.target.value)}
+                placeholder="Select category (Ex: Burger)"
+                className="w-full text-base text-[#333] mt-1 border-none outline-none bg-transparent placeholder-[#afb1b6]"
+              />
+            </div>
+
+            {/* Menu Section */}
+            <div className="border border-[#afb1b6] rounded-[10px] p-3">
+              <label className="text-[#61646b] text-xs font-medium uppercase tracking-wider">
+                Set Menu Section
+              </label>
+              <input
+                type="text"
+                value={formData.menuSection}
+                onChange={(e) =>
+                  handleInputChange("menuSection", e.target.value)
+                }
+                placeholder="Select section (Ex: Main Course)"
+                className="w-full text-base text-[#333] mt-1 border-none outline-none bg-transparent placeholder-[#afb1b6]"
+              />
+            </div>
+
+            {/* Price Fields */}
+            <div className="flex gap-[10px]">
+              <div className="border border-[#afb1b6] rounded-[10px] p-3 flex-1">
+                <label className="text-[#61646b] text-xs font-medium uppercase tracking-wider">
+                  Pickup Price
+                </label>
+                <input
+                  type="text"
+                  value={formData.pickupPrice}
+                  onChange={(e) =>
+                    handleInputChange("pickupPrice", e.target.value)
+                  }
+                  placeholder="$"
+                  className="w-full text-base text-[#333] mt-1 border-none outline-none bg-transparent placeholder-[#afb1b6]"
+                />
+              </div>
+              <div className="border border-[#afb1b6] rounded-[10px] p-3 flex-1">
+                <label className="text-[#61646b] text-xs font-medium uppercase tracking-wider">
+                  Delivery Price
+                </label>
+                <input
+                  type="text"
+                  value={formData.deliveryPrice}
+                  onChange={(e) =>
+                    handleInputChange("deliveryPrice", e.target.value)
+                  }
+                  placeholder="$"
+                  className="w-full text-base text-[#333] mt-1 border-none outline-none bg-transparent placeholder-[#afb1b6]"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Add-Ons Section */}
+          <div className="space-y-[15px]">
+            <h3 className="text-[#333] text-xl font-medium capitalize tracking-wide">
+              Add-Ons
+            </h3>
+            <div className="space-y-[10px]">
+              {addOns.map((addOn, index) => (
+                <div key={index} className="flex items-center gap-[10px]">
+                  <div className="border border-[#afb1b6] rounded-[10px] p-3 w-[231px]">
+                    <label className="text-[#61646b] text-xs font-medium uppercase tracking-wider">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={addOn.name}
+                      onChange={(e) =>
+                        handleAddOnChange(index, "name", e.target.value)
+                      }
+                      placeholder="Enter add-one name"
+                      className="w-full text-base text-[#333] mt-1 border-none outline-none bg-transparent placeholder-[#afb1b6]"
+                    />
+                  </div>
+                  <div className="border border-[#afb1b6] rounded-[10px] p-3 w-[112px]">
+                    <label className="text-[#61646b] text-xs font-medium uppercase tracking-wider">
+                      Price
+                    </label>
+                    <input
+                      type="text"
+                      value={addOn.price}
+                      onChange={(e) =>
+                        handleAddOnChange(index, "price", e.target.value)
+                      }
+                      placeholder="$"
+                      className="w-full text-base text-[#333] mt-1 border-none outline-none bg-transparent placeholder-[#afb1b6]"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              <button
+                onClick={addNewAddOn}
+                className="flex items-center gap-4 py-[14px] text-[#00955d] text-base font-medium capitalize"
+              >
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M11.9998 4.80005L11.9998 19.2M19.1998 12L4.7998 12"
+                    stroke="#00955D"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                New Add-One
+              </button>
+            </div>
+          </div>
+
+          {/* Food Allergies Section */}
+          <div className="space-y-[15px]">
+            <div className="space-y-[2px]">
+              <h3 className="text-[#333] text-xl font-medium capitalize tracking-wide">
+                Food Allergies
+              </h3>
+              <p className="text-[#5e5e5e] text-base">
+                Does this dish cause any food allergies?
+              </p>
+            </div>
+
+            <div className="space-y-[9px]">
+              <div className="flex flex-wrap gap-[10px]">
+                {allergies.slice(0, 3).map((allergy) => (
+                  <button
+                    key={allergy}
+                    onClick={() => toggleAllergy(allergy)}
+                    className={`flex items-center gap-[7px] h-[35px] px-3 rounded-[25px] ${
+                      selectedAllergies.includes(allergy)
+                        ? "bg-[#00955d] text-white"
+                        : "bg-[#f6f6f5] text-[#333]"
+                    }`}
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 13 13"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M6.375 1.125L6.375 11.875M11.75 6.5L1 6.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="text-sm font-medium capitalize">
+                      {allergy}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-[10px]">
+                {allergies.slice(3, 6).map((allergy) => (
+                  <button
+                    key={allergy}
+                    onClick={() => toggleAllergy(allergy)}
+                    className={`flex items-center gap-[7px] h-[35px] px-3 rounded-[25px] ${
+                      selectedAllergies.includes(allergy)
+                        ? "bg-[#00955d] text-white"
+                        : "bg-[#f6f6f5] text-[#333]"
+                    }`}
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 13 13"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M6.125 1.125L6.125 11.875M11.5 6.5L0.75 6.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="text-sm font-medium capitalize">
+                      {allergy}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-[10px]">
+                {allergies.slice(6).map((allergy) => (
+                  <button
+                    key={allergy}
+                    onClick={() => toggleAllergy(allergy)}
+                    className={`flex items-center gap-[7px] h-[35px] px-3 rounded-[25px] ${
+                      selectedAllergies.includes(allergy)
+                        ? "bg-[#00955d] text-white"
+                        : "bg-[#f6f6f5] text-[#333]"
+                    }`}
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 13 13"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M6.875 1.125L6.875 11.875M12.25 6.5L1.5 6.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="text-sm font-medium capitalize">
+                      {allergy}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-[10px] pt-8">
+            <button
+              onClick={handleSave}
+              className="w-full h-[60px] bg-gradient-to-r from-[#abe57d] to-[#00955d] border border-[#149f61] rounded-[14px] text-white text-base font-semibold capitalize"
+            >
+              Save
+            </button>
+            <button
+              onClick={handleCancel}
+              className="w-full h-[60px] text-[#afb1b6] text-base font-semibold capitalize rounded-[14px]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Skip Modal */}
+      {showSkipModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="text-xl font-semibold text-center mb-4">
+              Skip Adding Item?
+            </h3>
+            <p className="text-gray-600 text-center mb-6">
+              You can add menu items later from your dashboard.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={handleSkip}
+                className="w-full py-3 bg-gradient-to-r from-[#abe57d] to-[#00955d] text-white rounded-xl font-semibold"
+              >
+                Yes, Skip for Now
+              </button>
+              <button
+                onClick={handleContinue}
+                className="w-full py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold"
+              >
+                Continue Adding Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default NewItem;
