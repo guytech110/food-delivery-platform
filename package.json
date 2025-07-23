@@ -1,0 +1,28 @@
+{
+  "name": "food-delivery-platform",
+  "version": "1.0.0",
+  "description": "A complete food delivery platform with customer app, cook app, and admin portal",
+  "private": true,
+  "scripts": {
+    "dev:customer": "cd customer-app && npm run dev",
+    "dev:cook": "cd cook-app && npm run dev",
+    "dev:admin": "cd admin-portal && npm run dev",
+    "dev:all": "concurrently \"npm run dev:customer\" \"npm run dev:cook\" \"npm run dev:admin\"",
+    "install:all": "npm install && cd customer-app && npm install && cd ../cook-app && npm install && cd ../admin-portal && npm install",
+    "build:customer": "cd customer-app && npm run build",
+    "build:cook": "cd cook-app && npm run build",
+    "build:admin": "cd admin-portal && npm run build",
+    "build:all": "npm run build:customer && npm run build:cook && npm run build:admin",
+    "clean": "rm -rf node_modules && cd customer-app && rm -rf node_modules && cd ../cook-app && rm -rf node_modules && cd ../admin-portal && rm -rf node_modules"
+  },
+  "keywords": ["food-delivery", "react", "typescript", "firebase", "tailwindcss", "vite"],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}
