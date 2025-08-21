@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         setCook(null);
       }
-      setIsLoading(false);
+      setIsLoading(false); // only flip false after auth callback finishes fetching profile
     });
 
     return () => unsubscribe();
@@ -105,56 +105,39 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Real Firebase login
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
     setIsLoading(true);
-    
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      
-      // Check user role after login in cooks collection first
+      // Role checks remain; do NOT set isLoading(false) here on success – wait for onAuthStateChanged
       const uid = auth.currentUser!.uid;
       const cookDoc = await getDoc(doc(db, 'cooks', uid));
       const cookData = cookDoc.data();
-      
       if (!cookData || cookData.role !== 'cook') {
-        // Cross-check in users collection but return neutral message regardless
         const userDoc = await getDoc(doc(db, 'users', uid));
-        userDoc.data(); // intentionally not used to avoid role-revealing messaging
+        userDoc.data();
         await signOut(auth);
-        return { 
-          success: false, 
-          message: 'Sign-in not permitted for this application.' 
-        };
+        // No auth state change to an authenticated cook; onAuthStateChanged will fire (user signed out) so allow it to flip loading false.
+        return { success: false, message: 'Sign-in not permitted for this application.' };
       }
-      
       return { success: true, message: 'Login successful' };
     } catch (error: any) {
-      let message = 'Login failed';
-      if (error.code === 'auth/user-not-found') {
-        message = 'No account found with this email';
-      } else if (error.code === 'auth/wrong-password') {
-        message = 'Incorrect password';
-      } else if (error.code === 'auth/invalid-email') {
-        message = 'Invalid email address';
-      }
-      return { success: false, message };
-    } finally {
+      // Failed login will NOT trigger onAuthStateChanged; safe to end loading here
       setIsLoading(false);
+      let message = 'Login failed';
+      if (error.code === 'auth/user-not-found') message = 'No account found with this email';
+      else if (error.code === 'auth/wrong-password') message = 'Incorrect password';
+      else if (error.code === 'auth/invalid-email') message = 'Invalid email address';
+      return { success: false, message };
     }
   };
 
   // Real Firebase signup
   const signup = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
     setIsLoading(true);
-    
     try {
-      // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
-
       try {
-        // Update display name
         await updateProfile(firebaseUser, { displayName: name });
-
-        // Create cook document in Firestore with cook role
         await setDoc(doc(db, 'cooks', firebaseUser.uid), {
           name: name,
           email: email,
@@ -170,12 +153,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           createdAt: new Date()
         });
       } catch (profileErr: any) {
-        // If we fail to create the Firestore profile, delete the auth user to avoid orphan accounts
         try { await deleteUser(firebaseUser); } catch {}
         throw profileErr;
       }
-
-      // Manually set the cook state since onAuthStateChanged might not trigger immediately
+      // Manually set local state (ok) but keep loading true until onAuthStateChanged fires
       const cook: Cook = {
         id: firebaseUser.uid,
         name: name,
@@ -191,10 +172,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         onboardingCompleted: false
       };
       setCook(cook);
-
       return { success: true, message: 'Account created successfully' };
     } catch (error: any) {
-      // If the email is already in use, attempt to sign in and create the cook profile if missing
+      // Error paths that do NOT produce a successful auth state change must clear loading here
       if (error?.code === 'auth/email-already-in-use') {
         try {
           await signInWithEmailAndPassword(auth, email, password);
@@ -216,7 +196,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               createdAt: new Date()
             });
           }
-          // Set local state
           setCook({
             id: uid,
             name,
@@ -231,24 +210,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             applicationCompleted: false,
             onboardingCompleted: false,
           });
+          // Successful sign-in -> onAuthStateChanged will flip loading false
           return { success: true, message: 'Profile created for existing account' };
         } catch (linkErr: any) {
+          setIsLoading(false); // failed path
           const msg = linkErr?.code === 'auth/wrong-password' ? 'Email already in use. Please use the correct password for this account.' : 'Could not create profile for existing account.';
           return { success: false, message: msg };
         }
       }
-
+      setIsLoading(false); // generic failure
       let message = 'Signup failed';
-      if (error.code === 'auth/weak-password') {
-        message = 'Password should be at least 6 characters';
-      } else if (error.code === 'auth/invalid-email') {
-        message = 'Invalid email address';
-      } else if (error.code === 'permission-denied') {
-        message = 'Permission denied creating profile. Please contact support.';
-      }
+      if (error.code === 'auth/weak-password') message = 'Password should be at least 6 characters';
+      else if (error.code === 'auth/invalid-email') message = 'Invalid email address';
+      else if (error.code === 'permission-denied') message = 'Permission denied creating profile. Please contact support.';
       return { success: false, message };
-    } finally {
-      setIsLoading(false);
     }
   };
 

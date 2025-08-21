@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { setDoc, doc } from "firebase/firestore";
+import { auth, db } from "../lib/firebase";
 
 export default function SignUp() {
   const navigate = useNavigate();
-  const { signup } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,16 +31,27 @@ export default function SignUp() {
     setIsSubmitting(true);
 
     try {
-      const result = await signup(name, email, password);
-      
-      if (result.success) {
-        // After successful signup, redirect to allergy selection
-        navigate("/allergy-selection");
-      } else {
-        setError(result.message);
-      }
-    } catch (error) {
-      setError("An unexpected error occurred. Please try again.");
+      // Directly create Firebase Auth user and profile doc
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(cred.user, { displayName: name });
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        name,
+        email,
+        role: 'customer',
+        allergies: [],
+        deliveryAddress: '',
+        phoneNumber: '',
+        createdAt: new Date()
+      }, { merge: true });
+
+      // Navigate to protected onboarding route (never to /login)
+      navigate("/allergy-selection", { replace: true });
+    } catch (error: any) {
+      let message = 'An unexpected error occurred. Please try again.';
+      if (error?.code === 'auth/email-already-in-use') message = 'Email already in use';
+      else if (error?.code === 'auth/invalid-email') message = 'Invalid email address';
+      else if (error?.code === 'auth/weak-password') message = 'Password should be at least 6 characters';
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }
