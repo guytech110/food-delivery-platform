@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const allowCreateAdmin = import.meta.env.DEV && import.meta.env.VITE_DEV_ADMIN_BYPASS === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +24,7 @@ export function Login() {
 
     try {
       setError('');
+      setInfo('');
       setLoading(true);
       await login(email, password);
       navigate('/dashboard');
@@ -29,10 +34,34 @@ export function Login() {
         setError('No account found with this email address');
       } else if (error.code === 'auth/wrong-password') {
         setError('Incorrect password');
-      } else if (error.message.includes('Access denied')) {
-        setError('Access denied. Admin privileges required.');
+      } else if (error.message && error.message.includes('Sign-in not permitted')) {
+        setError('You do not have access to this portal.');
+        setInfo('If you should have access, ask an existing admin to grant you admin privileges.');
       } else {
         setError('Failed to log in. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError('Enter your email above to reset your password');
+      return;
+    }
+    try {
+      setError('');
+      setInfo('');
+      setLoading(true);
+      await sendPasswordResetEmail(auth, email);
+      setInfo('Password reset email sent. Check your inbox.');
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      if (error.code === 'auth/user-not-found') {
+        setError('No account found with this email address');
+      } else {
+        setError('Failed to send reset email. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -56,8 +85,15 @@ export function Login() {
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
               {error}
+            </div>
+          )}
+
+          {/* Info Message */}
+          {info && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg mb-4">
+              {info}
             </div>
           )}
 
@@ -110,16 +146,30 @@ export function Login() {
                 'Sign In'
               )}
             </button>
+
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={handleResetPassword}
+                className="text-sm text-blue-600 hover:underline"
+                disabled={loading}
+              >
+                Forgot password?
+              </button>
+              {allowCreateAdmin && (
+                <a href="/create-admin" className="text-sm text-gray-600 hover:underline">Create admin</a>
+              )}
+            </div>
           </form>
 
           {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-500">
-              This portal is restricted to authorized administrators only.
+              This portal is restricted to authorized users.
             </p>
           </div>
         </div>
       </div>
     </div>
   );
-} 
+}

@@ -1,0 +1,13 @@
+This folder contains Firebase configuration for deploying security rules.
+
+Files:
+- .firebaserc: project alias configured to hometaste-aaba7 (change if needed).
+- firebase.json: points to firestore.rules and storage.rules.
+- firestore.rules: Firestore security rules.
+- storage.rules: Storage security rules.
+
+To deploy rules:
+1) Install Firebase CLI (already installed).
+2) Authenticate: firebase login --no-localhost
+3) Set project: firebase use hometaste-aaba7
+4) Deploy rules: firebase deploy --only firestore:rules,storage:rules

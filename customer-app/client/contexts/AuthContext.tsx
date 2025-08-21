@@ -58,8 +58,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Check if user has a role and it's 'customer'
           if (!userData || userData.role !== 'customer') {
-            // User is not a customer, sign them out
-            await signOut(auth);
+            // Do not force sign-out; just clear local customer state
             setUser(null);
             setIsLoading(false);
             return;
@@ -78,8 +77,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(user);
         } catch (error) {
           console.error('Error fetching user data:', error);
-          // If error, sign out the user
-          await signOut(auth);
+          // If error, don't force sign out
           setUser(null);
         }
       } else {
@@ -93,22 +91,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Real Firebase login
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
-    setIsLoading(true);
-    
+    // Let onAuthStateChanged control isLoading to avoid redirect races
     try {
       await signInWithEmailAndPassword(auth, email, password);
       
       // Check user role after login
-      const userDoc = await getDoc(doc(db, 'users', auth.currentUser!.uid));
+      const uid = auth.currentUser!.uid;
+      const userDoc = await getDoc(doc(db, 'users', uid));
       const userData = userDoc.data();
       
       if (!userData || userData.role !== 'customer') {
+        // Cross-check in cooks collection but return neutral message regardless
+        const cookDoc = await getDoc(doc(db, 'cooks', uid));
+        cookDoc.data(); // intentionally not used to avoid role-revealing messaging
         await signOut(auth);
         return { 
           success: false, 
-          message: 'This account is for cooks. Please use the cook app to login.' 
+          message: 'Sign-in not permitted for this application.' 
         };
       }
+
+      // Set local user immediately to prevent redirect loop
+      const current = auth.currentUser!;
+      setUser({
+        id: current.uid,
+        name: current.displayName || userData?.name || 'User',
+        email: current.email || '',
+        role: 'customer',
+        allergies: userData?.allergies || [],
+        deliveryAddress: userData?.deliveryAddress || '',
+        phoneNumber: userData?.phoneNumber || ''
+      });
       
       return { success: true, message: 'Login successful' };
     } catch (error: any) {
@@ -121,15 +134,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         message = 'Invalid email address';
       }
       return { success: false, message };
-    } finally {
-      setIsLoading(false);
     }
   };
 
   // Real Firebase signup
   const signup = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
-    setIsLoading(true);
-    
+    // Let onAuthStateChanged control isLoading to avoid redirect races
     try {
       // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -149,19 +159,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createdAt: new Date()
       });
 
+      // Immediately set local user to avoid race where ProtectedRoute redirects before Firestore read completes
+      setUser({
+        id: firebaseUser.uid,
+        name: name,
+        email: email,
+        role: 'customer',
+        allergies: [],
+        deliveryAddress: '',
+        phoneNumber: ''
+      });
+
       return { success: true, message: 'Account created successfully' };
     } catch (error: any) {
+      // If the email is already in use, attempt to sign in and create the user profile if missing
+      if (error?.code === 'auth/email-already-in-use') {
+        try {
+          await signInWithEmailAndPassword(auth, email, password);
+          const uid = auth.currentUser!.uid;
+          const existingUserDoc = await getDoc(doc(db, 'users', uid));
+          if (!existingUserDoc.exists()) {
+            await setDoc(doc(db, 'users', uid), {
+              name,
+              email,
+              role: 'customer',
+              allergies: [],
+              deliveryAddress: '',
+              phoneNumber: '',
+              createdAt: new Date()
+            });
+          }
+          return { success: true, message: 'Profile created for existing account' };
+        } catch (linkErr: any) {
+          const msg = linkErr?.code === 'auth/wrong-password' ? 'Email already in use. Please use the correct password for this account.' : 'Could not create profile for existing account.';
+          return { success: false, message: msg };
+        }
+      }
+
       let message = 'Signup failed';
-      if (error.code === 'auth/email-already-in-use') {
-        message = 'An account with this email already exists';
-      } else if (error.code === 'auth/weak-password') {
+      if (error.code === 'auth/weak-password') {
         message = 'Password should be at least 6 characters';
       } else if (error.code === 'auth/invalid-email') {
         message = 'Invalid email address';
       }
       return { success: false, message };
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -214,4 +255,4 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};

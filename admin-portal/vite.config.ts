@@ -5,6 +5,11 @@ import path from "path";
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    host: process.env.VITE_HOST || "localhost",
+    port: 5176,
+    strictPort: true,
+  },
   plugins: [react()],
   publicDir: "./static",
   base: "./",
@@ -16,6 +21,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      "@shared": path.resolve(__dirname, "shared"),
     },
   },
 });

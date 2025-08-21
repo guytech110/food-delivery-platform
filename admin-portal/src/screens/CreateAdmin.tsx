@@ -5,9 +5,12 @@ import { auth, db } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 
 export function CreateAdmin() {
-  const [email, setEmail] = useState('admin@fooddelivery.com');
-  const [password, setPassword] = useState('admin123456');
-  const [name, setName] = useState('Admin User');
+  // Only allow in development with explicit bypass
+  const allowCreateAdmin = import.meta.env.DEV && import.meta.env.VITE_DEV_ADMIN_BYPASS === 'true';
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -20,49 +23,58 @@ export function CreateAdmin() {
     setMessage('');
 
     try {
-      // Create user in Firebase Auth
+      // Create user in Firebase Auth (this also signs the user in)
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Create user document in Firestore with admin role
-      await setDoc(doc(db, 'admins', user.uid), {
+      // Prefer writing to the 'users' collection with role 'admin'
+      await setDoc(doc(db, 'users', user.uid), {
         id: user.uid,
-        name: name,
+        name: name || 'Admin User',
         email: email,
-        role: 'super_admin',
-        permissions: [
-          'manage_cooks',
-          'review_applications', 
-          'manage_orders',
-          'view_analytics',
-          'manage_support',
-          'manage_settings'
-        ],
-        phoneNumber: '+1 (555) 123-4567',
+        role: 'admin',
         createdAt: new Date(),
-        lastLogin: new Date()
+        lastLogin: new Date(),
+        isActive: true,
       });
 
-      setMessage('Admin user created successfully! You can now log in.');
-      
-      // Auto-login after creation
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
+      setMessage('Account created. You can now sign in.');
 
+      // Navigate after a short delay (user is already signed in)
+      setTimeout(() => {
+        navigate('/login');
+      }, 1200);
     } catch (error: any) {
       console.error('Error creating admin user:', error);
-      
+
       if (error.code === 'auth/email-already-in-use') {
-        setError('User already exists. You can try logging in with these credentials.');
-        setMessage('Email: ' + email + ', Password: ' + password);
+        setError('Account already exists. Try signing in.');
+      } else if (error.code === 'permission-denied' || (error.message && error.message.includes('insufficient permissions'))) {
+        setError('Missing or insufficient permissions to create the profile.');
+        setMessage('Try signing in on the login page, or contact a project administrator.');
       } else {
-        setError('Failed to create admin user: ' + error.message);
+        setError('Failed to create account. Please try again.');
       }
     } finally {
       setLoading(false);
     }
   };
+
+  if (!allowCreateAdmin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full space-y-8">
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Page Unavailable</h2>
+            <p className="text-gray-600">Admin account creation is disabled in this environment.</p>
+            <div className="mt-6">
+              <a href="/login" className="text-blue-600 hover:underline">Return to Sign In</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -169,4 +181,4 @@ export function CreateAdmin() {
       </div>
     </div>
   );
-} 
+}

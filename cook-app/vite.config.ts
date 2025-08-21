@@ -6,8 +6,9 @@ import { createServer } from "./server";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
-    port: 8080,
+    host: process.env.VITE_HOST || "localhost",
+    port: 5178,
+    strictPort: true,
   },
   build: {
     outDir: "dist/spa",

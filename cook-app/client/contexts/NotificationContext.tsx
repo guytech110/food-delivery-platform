@@ -7,10 +7,13 @@ import {
   where,
   orderBy,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  doc,
+  getDoc
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
+import { logger } from '@/lib/logger';
 
 // Notification types
 export enum NotificationType {
@@ -154,17 +157,29 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
       await addDoc(collection(db, 'chatMessages'), chatMessage);
       
-      // Also send a notification to the other party
-      const notificationData = {
-        userId: senderType === 'customer' ? 'cook' : 'customer', // This will be filtered by the recipient
-        type: NotificationType.CHAT_MESSAGE,
-        title: 'New Message',
-        message: `${chatMessage.senderName}: ${message}`,
-        orderId,
-        data: { senderType, senderName: chatMessage.senderName }
-      };
+      // Determine recipient from the order
+      const orderSnap = await getDoc(doc(db, 'orders', orderId));
+      let recipientId: string | null = null;
+      if (orderSnap.exists()) {
+        const order = orderSnap.data() as any;
+        recipientId = senderType === 'cook' ? order.customerId : order.cookId;
+      }
 
-      await sendNotification(notificationData);
+      if (recipientId) {
+        const notificationData = {
+          userId: recipientId,
+          type: NotificationType.CHAT_MESSAGE,
+          title: 'New Message',
+          message: `${chatMessage.senderName}: ${message}`,
+          orderId,
+          data: { senderType, senderName: chatMessage.senderName }
+        };
+        await addDoc(collection(db, 'notifications'), {
+          ...notificationData,
+          isRead: false,
+          createdAt: serverTimestamp()
+        });
+      }
     } catch (error) {
       console.error('Error sending chat message:', error);
     }
@@ -213,7 +228,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   // Request notification permission
   const requestNotificationPermission = async (): Promise<boolean> => {
     if (!('Notification' in window)) {
-      console.log('This browser does not support notifications');
+      logger.log('This browser does not support notifications');
       return false;
     }
 
@@ -222,7 +237,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
 
     if (Notification.permission === 'denied') {
-      console.log('Notification permission denied');
+      logger.log('Notification permission denied');
       return false;
     }
 
@@ -265,4 +280,4 @@ export const useNotifications = (): NotificationContextType => {
     throw new Error('useNotifications must be used within a NotificationProvider');
   }
   return context;
-}; 
+};

@@ -1,0 +1,55 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.role in ['admin', 'super_admin']) ||
+        (
+          exists(/databases/(default)/documents/admins/$(request.auth.uid)) &&
+          get(/databases/(default)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'super_admin']
+        ) || (
+          exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+          get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        )
+      );
+    }
+    function isImageUpload() {
+      return request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && (request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp'])
+        && request.resource.name.matches('.*\\.(jpe?g|png|webp)$');
+    }
+
+    // Only admins can list bucket contents broadly
+    match /{allPaths=**} {
+      allow list: if isAdmin();
+    }
+
+    // User uploads are scoped to uploads/{userId}/**
+    match /uploads/{userId}/{path=**} {
+      // Read: owner or admin
+      allow read: if isAdmin() || isOwner(userId);
+      // List within own folder: owner or admin
+      allow list: if isAdmin() || isOwner(userId);
+
+      // Create/Update: owner or admin, with strict image type, extension, and 5MB size limit
+      allow write: if (isAdmin() || isOwner(userId)) && isImageUpload();
+
+      // Delete: owner or admin
+      allow delete: if isAdmin() || isOwner(userId);
+    }
+
+    // Public assets (if any)
+    match /public/{path=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Deny all other paths by default
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

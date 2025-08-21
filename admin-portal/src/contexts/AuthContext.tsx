@@ -3,6 +3,8 @@ import { signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'f
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
+// Remove local ImportMeta typings; they are declared in src/vite-env.d.ts
+
 interface AuthContextType {
   currentUser: User | null;
   isAdmin: boolean;
@@ -30,35 +32,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const devBypassEnabled = import.meta.env.DEV && import.meta.env.VITE_DEV_ADMIN_BYPASS === 'true';
+  const devBypassEmail = (import.meta.env.VITE_DEV_ADMIN_EMAIL as string) || '';
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      
+      let admin = false;
+
       if (user) {
-        // Check if user is admin in the admins collection
         try {
-          const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-          if (adminDoc.exists()) {
-            const adminData = adminDoc.data();
-            setIsAdmin(adminData.role === 'admin' || adminData.role === 'super_admin');
+          // Prefer custom claims for role
+          const idTokenResult = await user.getIdTokenResult(true);
+          const role = (idTokenResult.claims as any)?.role as string | undefined;
+          if (role === 'admin' || role === 'super_admin') {
+            admin = true;
           } else {
-            // Also check users collection as fallback
-            const userDoc = await getDoc(doc(db, 'users', user.uid));
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              setIsAdmin(userData.role === 'admin');
+            // Fallback to Firestore-based role checks
+            const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+            if (adminDoc.exists()) {
+              const adminData = adminDoc.data();
+              admin = adminData.role === 'admin' || adminData.role === 'super_admin';
             } else {
-              setIsAdmin(false);
+              const userDoc = await getDoc(doc(db, 'users', user.uid));
+              if (userDoc.exists()) {
+                const userData = userDoc.data();
+                admin = userData.role === 'admin';
+              }
             }
           }
         } catch (error) {
-          console.error('Error checking admin status:', error);
-          setIsAdmin(false);
+          if (import.meta.env.DEV) console.error('Error checking admin status:', error);
         }
-      } else {
-        setIsAdmin(false);
+
+        // Dev bypass as last resort in dev only
+        if (!admin && devBypassEnabled && user.email && user.email.toLowerCase() === devBypassEmail.toLowerCase()) {
+          if (import.meta.env.DEV) console.warn('[DEV] Admin bypass active for', user.email);
+          admin = true;
+        }
       }
-      
+
+      setIsAdmin(admin);
       setLoading(false);
     });
 
@@ -69,31 +83,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
-      // Check if user is admin in the admins collection
+
+      // Refresh and check custom claims first
+      const idTokenResult = await user.getIdTokenResult(true);
+      const role = (idTokenResult.claims as any)?.role as string | undefined;
+      if (role === 'admin' || role === 'super_admin') {
+        return;
+      }
+
+      // Fallback: Firestore role docs
       const adminDoc = await getDoc(doc(db, 'admins', user.uid));
       if (adminDoc.exists()) {
         const adminData = adminDoc.data();
-        if (adminData.role !== 'admin' && adminData.role !== 'super_admin') {
-          await signOut(auth);
-          throw new Error('Access denied. Admin privileges required.');
-        }
-      } else {
-        // Also check users collection as fallback
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (userData.role !== 'admin') {
-            await signOut(auth);
-            throw new Error('Access denied. Admin privileges required.');
-          }
-        } else {
-          await signOut(auth);
-          throw new Error('User not found.');
-        }
+        if (adminData.role === 'admin' || adminData.role === 'super_admin') return;
       }
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.role === 'admin') return;
+      }
+
+      // Dev bypass in development
+      if (devBypassEnabled && user.email && user.email.toLowerCase() === devBypassEmail.toLowerCase()) {
+        if (import.meta.env.DEV) console.warn('[DEV] Admin bypass login for', user.email);
+        return;
+      }
+
+      await signOut(auth);
+      throw new Error('Sign-in not permitted for this application.');
     } catch (error) {
-      console.error('Login error:', error);
+      if (import.meta.env.DEV) console.error('Login error:', error);
       throw error;
     }
   };
@@ -102,7 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await signOut(auth);
     } catch (error) {
-      console.error('Logout error:', error);
+      if (import.meta.env.DEV) console.error('Logout error:', error);
       throw error;
     }
   };
@@ -120,4 +139,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-}; 
+};

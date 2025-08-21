@@ -1,0 +1,16 @@
+# Ignore hosting configs not used by Vercel
+netlify*
+netlify/**
+netlify.toml
+
+# Tests and coverage
+**/*.spec.*
+**/*.test.*
+coverage/
+
+# Editor and tooling
+.vscode/
+.idea/
+
+# Build caches
+.vite/

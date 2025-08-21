@@ -7,6 +7,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { X, ChefHat } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { logger } from '@/lib/logger';
 
 export default function CookApplicationStep3() {
   const navigate = useNavigate();
@@ -67,26 +70,29 @@ export default function CookApplicationStep3() {
         ...step1Data,
         ...step2Data,
         ...step3Data,
-        submittedAt: new Date(),
+        submittedAt: Timestamp.now(),
       };
 
-      // Update cook profile with application data
-      await updateCook({
-        ...completeApplication,
-        applicationCompleted: true,
-        onboardingCompleted: true,
-      });
+      logger.log('About to update cook profile...', completeApplication);
 
-      // Store complete application in Firestore for admin review
-      const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('@/lib/firebase');
-      
-      await setDoc(doc(db, 'cookApplications', cook.id), {
-        cookId: cook.id,
-        ...completeApplication,
-        status: 'pending',
-        submittedAt: new Date(),
-      });
+      // Update cook profile with application data (including full application data for admin review)
+      try {
+        await updateCook({
+          ...completeApplication,
+          applicationCompleted: true,
+          onboardingCompleted: true,
+          // Store full application data in the cook document for admin review
+          applicationData: {
+            ...completeApplication,
+            status: 'pending',
+            submittedAt: Timestamp.now(),
+          }
+        });
+        logger.log('Cook profile and application data updated successfully');
+      } catch (updateError) {
+        console.error('Error updating cook profile:', updateError);
+        throw new Error('Failed to update cook profile: ' + (updateError as Error).message);
+      }
 
       toast({
         title: "Application Submitted!",
@@ -105,6 +111,13 @@ export default function CookApplicationStep3() {
       }, 500);
     } catch (error) {
       console.error('Error submitting application:', error);
+      
+      // More detailed error logging
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      
       toast({
         title: "Submission Error",
         description: "Failed to submit application. Please try again.",
