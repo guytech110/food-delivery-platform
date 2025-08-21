@@ -11,7 +11,7 @@ import { CartProvider } from "./contexts/CartContext";
 import { OrderProvider } from "./contexts/OrderContext";
 import { MenuProvider } from "./contexts/MenuContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
-import ProtectedRoute from "./components/ProtectedRoute";
+// Removed ProtectedRoute
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -31,9 +31,6 @@ import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 import Search from "./pages/Search";
 import CookProfile from "./pages/CookProfile";
-import React from "react";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import DebugAuth from "./pages/DebugAuth";
 
 const queryClient = new QueryClient();
 
@@ -45,37 +42,32 @@ const App = () => (
           <MenuProvider>
             <NotificationProvider>
               <TooltipProvider>
-                <ErrorBoundary>
-                  <Toaster />
-                  <Sonner />
-                  <BrowserRouter>
-                    <div className="bg-white">
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/signup" element={<SignUp />} />
-                        <Route path="/allergy-selection" element={<ProtectedRoute><AllergySelection /></ProtectedRoute>} />
-                        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-                        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                        <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-                        <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
-                        <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
-                        <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
-                        <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
-                        <Route path="/help-support" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
-                        <Route path="/terms-policies" element={<ProtectedRoute><TermsPolicies /></ProtectedRoute>} />
-                        <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
-                        <Route path="/personal-info" element={<ProtectedRoute><PersonalInfo /></ProtectedRoute>} />
-                        <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-                        <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-                        <Route path="/cook/:cookId" element={<ProtectedRoute><CookProfile /></ProtectedRoute>} />
-                        <Route path="/debug-auth" element={<DebugAuth />} />
-                        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </div>
-                  </BrowserRouter>
-                </ErrorBoundary>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/allergy-selection" element={<AllergySelection />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/orders" element={<Orders />} />
+              <Route path="/order-confirmation" element={<OrderConfirmation />} />
+              <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/wallet" element={<Wallet />} />
+              <Route path="/help-support" element={<HelpSupport />} />
+              <Route path="/terms-policies" element={<TermsPolicies />} />
+              <Route path="/subscriptions" element={<Subscriptions />} />
+            <Route path="/personal-info" element={<PersonalInfo />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/cook/:cookId" element={<CookProfile />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
               </TooltipProvider>
             </NotificationProvider>
           </MenuProvider>

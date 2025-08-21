@@ -26,7 +26,6 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  authReady: boolean; // NEW: true only after first onAuthStateChanged fires
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   signup: (name: string, email: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
@@ -44,128 +43,86 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [authReady, setAuthReady] = useState(false);
-  const firstFiredRef = useRef(false);
+  const provisioningRef = useRef(false); // tracks initial provisioning
 
   // Check if user is authenticated
   const isAuthenticated = !!user;
 
-  // Helper: sleep for retry backoff
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
   // Listen for Firebase auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      // Keep loading true until we finish first callback logic
-      setIsLoading(true);
-
+      console.log('[Auth] onAuthStateChanged fired', { uid: firebaseUser?.uid });
       if (firebaseUser) {
-        // Try to fetch Firestore profile with retries to handle race with signup profile creation
-        const maxRetries = 5;
-        const delayMs = 250;
-        let attempt = 0;
-        let userData: any | undefined;
-
-        while (attempt < maxRetries) {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-            if (userDoc.exists()) {
-              userData = userDoc.data();
-              break;
-            }
-          } catch (e) {
-            // swallow and retry
-          }
-          attempt++;
-          await sleep(delayMs);
-        }
-
-        // If profile exists and is customer, set user
-        if (userData && userData.role === 'customer') {
-          const mapped: User = {
-            id: firebaseUser.uid,
-            name: firebaseUser.displayName || userData?.name || 'User',
-            email: firebaseUser.email || '',
-            role: 'customer',
-            allergies: userData?.allergies || [],
-            deliveryAddress: userData?.deliveryAddress || '',
-            phoneNumber: userData?.phoneNumber || ''
-          };
-          setUser(mapped);
-        } else {
-          // Safe fallback: if this looks like a brand-new sign-up (profile may not be written yet),
-          // temporarily authenticate the session to let onboarding continue. We'll reconcile on next auth tick.
-          const creationTime = firebaseUser.metadata?.creationTime ? Date.parse(firebaseUser.metadata.creationTime) : 0;
-          const lastSignInTime = firebaseUser.metadata?.lastSignInTime ? Date.parse(firebaseUser.metadata.lastSignInTime) : 0;
-          const justCreated = creationTime && lastSignInTime && Math.abs(lastSignInTime - creationTime) < 15000; // 15s window
-
-          if (!userData && justCreated) {
-            const tempUser: User = {
-              id: firebaseUser.uid,
+        try {
+          const userDocRef = doc(db, 'users', firebaseUser.uid);
+          const userDoc = await getDoc(userDocRef);
+          console.log('[Auth] userDoc exists?', userDoc.exists());
+          const userData = userDoc.data();
+          console.log('[Auth] userData', userData);
+          if (!userDoc.exists()) {
+            console.log('[Auth] provisioning new user doc');
+            provisioningRef.current = true;
+            await setDoc(userDocRef, {
               name: firebaseUser.displayName || 'User',
               email: firebaseUser.email || '',
               role: 'customer',
               allergies: [],
               deliveryAddress: '',
-              phoneNumber: ''
-            };
-            setUser(tempUser);
-          } else {
-            // If role mismatch or missing profile beyond initial window
+              phoneNumber: '',
+              createdAt: new Date()
+            });
+          }
+          const finalDoc = provisioningRef.current ? await getDoc(userDocRef) : userDoc;
+          const finalData = finalDoc.data();
+          console.log('[Auth] finalData after provisioning', finalData);
+          if (finalData && finalData.role && finalData.role !== 'customer') {
+            console.log('[Auth] role mismatch -> signOut');
+            await signOut(auth);
             setUser(null);
+            setIsLoading(false);
+            provisioningRef.current = false;
+            return;
+          }
+          const mergedUser: User = {
+            id: firebaseUser.uid,
+            name: firebaseUser.displayName || finalData?.name || 'User',
+            email: firebaseUser.email || finalData?.email || '',
+            role: 'customer',
+            allergies: finalData?.allergies || [],
+            deliveryAddress: finalData?.deliveryAddress || '',
+            phoneNumber: finalData?.phoneNumber || ''
+          };
+          console.log('[Auth] setting user state', mergedUser);
+          setUser(mergedUser);
+          provisioningRef.current = false;
+        } catch (error) {
+          console.error('Error fetching/provisioning user data:', error);
+          if (firebaseUser) {
+            console.log('[Auth] fallback basic user');
+            setUser({
+              id: firebaseUser.uid,
+              name: firebaseUser.displayName || 'User',
+              email: firebaseUser.email || '',
+              role: 'customer'
+            });
           }
         }
       } else {
+        console.log('[Auth] firebaseUser null -> clearing user');
         setUser(null);
       }
-
-      // Mark authReady after first callback completes
-      if (!firstFiredRef.current) {
-        firstFiredRef.current = true;
-        setAuthReady(true);
-      }
-
-      // End loading AFTER user state set and authReady potentially flipped
       setIsLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
   // Real Firebase login
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
-    // Let onAuthStateChanged control isLoading to avoid redirect races
+    setIsLoading(true);
+    
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      
-      // Check user role after login
-      const uid = auth.currentUser!.uid;
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      const userData = userDoc.data();
-      
-      if (!userData || userData.role !== 'customer') {
-        // Cross-check in cooks collection but return neutral message regardless
-        const cookDoc = await getDoc(doc(db, 'cooks', uid));
-        cookDoc.data(); // intentionally not used
-        await signOut(auth);
-        return { 
-          success: false, 
-          message: 'Sign-in not permitted for this application.' 
-        };
-      }
-
-      // Set local user immediately to prevent redirect loop
-      const current = auth.currentUser!;
-      setUser({
-        id: current.uid,
-        name: current.displayName || userData?.name || 'User',
-        email: current.email || '',
-        role: 'customer',
-        allergies: userData?.allergies || [],
-        deliveryAddress: userData?.deliveryAddress || '',
-        phoneNumber: userData?.phoneNumber || ''
-      });
-      
+      // After sign in, defer role enforcement to onAuthStateChanged (avoid duplicate fetch & race)
       return { success: true, message: 'Login successful' };
     } catch (error: any) {
       let message = 'Login failed';
@@ -177,12 +134,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         message = 'Invalid email address';
       }
       return { success: false, message };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Real Firebase signup
   const signup = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
-    // Let onAuthStateChanged control isLoading to avoid redirect races
+    setIsLoading(true);
+    
     try {
       // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -202,50 +162,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createdAt: new Date()
       });
 
-      // Immediately set local user to avoid race where ProtectedRoute redirects before Firestore read completes
-      setUser({
-        id: firebaseUser.uid,
-        name: name,
-        email: email,
-        role: 'customer',
-        allergies: [],
-        deliveryAddress: '',
-        phoneNumber: ''
-      });
-
       return { success: true, message: 'Account created successfully' };
     } catch (error: any) {
-      // If the email is already in use, attempt to sign in and create the user profile if missing
-      if (error?.code === 'auth/email-already-in-use') {
-        try {
-          await signInWithEmailAndPassword(auth, email, password);
-          const uid = auth.currentUser!.uid;
-          const existingUserDoc = await getDoc(doc(db, 'users', uid));
-          if (!existingUserDoc.exists()) {
-            await setDoc(doc(db, 'users', uid), {
-              name,
-              email,
-              role: 'customer',
-              allergies: [],
-              deliveryAddress: '',
-              phoneNumber: '',
-              createdAt: new Date()
-            });
-          }
-          return { success: true, message: 'Profile created for existing account' };
-        } catch (linkErr: any) {
-          const msg = linkErr?.code === 'auth/wrong-password' ? 'Email already in use. Please use the correct password for this account.' : 'Could not create profile for existing account.';
-          return { success: false, message: msg };
-        }
-      }
-
       let message = 'Signup failed';
-      if (error.code === 'auth/weak-password') {
+      if (error.code === 'auth/email-already-in-use') {
+        message = 'An account with this email already exists';
+      } else if (error.code === 'auth/weak-password') {
         message = 'Password should be at least 6 characters';
       } else if (error.code === 'auth/invalid-email') {
         message = 'Invalid email address';
       }
       return { success: false, message };
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -278,7 +207,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     isAuthenticated,
     isLoading,
-    authReady,
     login,
     signup,
     logout,
