@@ -33,6 +33,7 @@ import Search from "./pages/Search";
 import CookProfile from "./pages/CookProfile";
 import React from "react";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import DebugAuth from "./pages/DebugAuth";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ const App = () => (
                         <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
                         <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
                         <Route path="/cook/:cookId" element={<ProtectedRoute><CookProfile /></ProtectedRoute>} />
+                        <Route path="/debug-auth" element={<DebugAuth />} />
                         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                         <Route path="*" element={<NotFound />} />
                       </Routes>

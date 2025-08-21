@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
@@ -15,6 +15,26 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string,
 };
+
+// Basic validation & redaction for production diagnostics
+const forcedDebug = typeof window !== 'undefined' && window.location.search.includes('forceLog=1');
+const debugEnabled = !!import.meta.env.VITE_ENABLE_AUTH_DEBUG || forcedDebug || import.meta.env.DEV;
+if (debugEnabled) {
+  try {
+    const redacted: Record<string,string|undefined> = {};
+    Object.entries(firebaseConfig).forEach(([k,v]) => { redacted[k] = v ? (String(v).length > 8 ? String(v).slice(0,4)+"…"+String(v).slice(-2) : v) : undefined; });
+    const missing = Object.entries(firebaseConfig).filter(([_,v]) => !v).map(([k]) => k);
+    // eslint-disable-next-line no-console
+    console.log('[Firebase] Config summary', redacted, 'missing', missing);
+    if (missing.length) {
+      // eslint-disable-next-line no-console
+      console.warn('[Firebase] Missing Firebase environment variables:', missing.join(', '));
+    }
+  } catch(e) {
+    // eslint-disable-next-line no-console
+    console.warn('[Firebase] Config inspection failed', e);
+  }
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -34,6 +54,14 @@ if (appCheckSiteKey) {
 
 // Initialize Firebase services
 export const auth = getAuth(app);
+console.log('[Firebase] Initialized app', app.name, 'Auth domain', import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, 'debug', debugEnabled);
+
+setPersistence(auth, browserLocalPersistence).then(()=>{
+  console.log('[Firebase] Auth persistence set to local');
+}).catch((e) => {
+  console.warn('Failed to set auth persistence', e);
+});
+
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
