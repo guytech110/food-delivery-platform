@@ -1,16 +1,10 @@
-# Ignore hosting configs not used by Vercel
-netlify*
-netlify/**
-netlify.toml
-
-# Tests and coverage
-**/*.spec.*
-**/*.test.*
-coverage/
-
-# Editor and tooling
-.vscode/
-.idea/
-
-# Build caches
-.vite/
+# Exclude local dev & unnecessary files from upload
+node_modules
+npm-debug.log
+.DS_Store
+.vscode
+coverage
+*.local
+*.log
+# Exclude raw source maps if desired
+# dist/**/*.map
