@@ -1,11 +1,12 @@
 {
   "version": 2,
   "builds": [
-    { "src": "server/node-build.ts", "use": "@vercel/node" },
-    { "src": "vite.config.ts", "use": "@vercel/static-build", "config": { "distDir": "dist/spa" } }
+    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist/spa" } },
+    { "src": "server/node-build.ts", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "server/node-build.ts" },
-    { "src": "/(.*)", "dest": "/dist/spa/$1" }
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
