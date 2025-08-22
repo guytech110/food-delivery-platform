@@ -15,7 +15,6 @@ import {
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { NotificationType } from './NotificationContext';
-import { logger } from '@/lib/logger';
 
 // Order interfaces
 export interface OrderItem {
@@ -130,8 +129,8 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({ children }) => {
         customerName: orderData.customerName
       });
 
-      logger.log('Customer App - Order created with cookId:', orderData.cookId);
-      logger.log('Customer App - Order created with cookName:', orderData.cookName);
+      console.log('Customer App - Order created with cookId:', orderData.cookId);
+      console.log('Customer App - Order created with cookName:', orderData.cookName);
 
       // Send notification to customer about order confirmation
       await sendNotification({
@@ -305,4 +304,4 @@ export const useOrders = (): OrderContextType => {
     throw new Error('useOrders must be used within an OrderProvider');
   }
   return context;
-};
+}; 

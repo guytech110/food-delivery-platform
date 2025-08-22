@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { logger } from "@/lib/logger";
 
 const OrderDetails: React.FC = () => {
   const navigate = useNavigate();
@@ -9,13 +8,13 @@ const OrderDetails: React.FC = () => {
 
   const handleAccept = () => {
     // Handle order acceptance logic
-    logger.log("Accepting order:", orderId);
+    console.log("Accepting order:", orderId);
     navigate("/orders");
   };
 
   const handleRejectOrder = () => {
     // Handle order rejection logic
-    logger.log("Rejecting order:", orderId);
+    console.log("Rejecting order:", orderId);
     setShowRejectModal(false);
     navigate("/orders");
   };
@@ -319,12 +318,18 @@ const OrderDetails: React.FC = () => {
         </div>
       )}
 
-      <style>{`
+      <style jsx>{`
         @keyframes slide-up {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
         }
-        .animate-slide-up { animation: slide-up 0.3s ease-out; }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
       `}</style>
     </div>
   );

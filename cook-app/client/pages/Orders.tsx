@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Truck } from "lucide-react";
-import { logger } from '@/lib/logger';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -41,10 +40,10 @@ const Orders: React.FC = () => {
 
   useEffect(() => {
     if (cook) {
-      logger.log('Orders.tsx - Setting up listener for cook:', cook.id);
+      console.log('Orders.tsx - Setting up listener for cook:', cook.id);
       const unsubscribe = subscribeToCookOrders(cook.id);
       return () => {
-        logger.log('Orders.tsx - Cleaning up listener for cook:', cook.id);
+        console.log('Orders.tsx - Cleaning up listener for cook:', cook.id);
         unsubscribe();
       };
     }

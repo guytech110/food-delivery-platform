@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import BottomNavigation from "../components/BottomNavigation";
-import { restaurants, categories } from "../data/restaurants";
+import { restaurants, getRecommendedItems, categories } from "../data/restaurants";
 import FoodItem from "../components/FoodItem";
 import CartIcon from "../components/CartIcon";
 import NotificationBell from "../components/NotificationBell";
@@ -44,13 +44,8 @@ const Home = () => {
     setIsMapExpanded(!isMapExpanded);
   };
 
-  // Get recommended items from live menu data (sorted by rating)
-  const recommendedItems = React.useMemo(() => {
-    return menuItems
-      .slice()
-      .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-      .slice(0, 8);
-  }, [menuItems]);
+  // Get recommended items
+  const recommendedItems = getRecommendedItems();
 
   // Group menu items by cook
   const cooks: Cook[] = React.useMemo(() => {

@@ -17,9 +17,9 @@ food-delivery-platform/
 ## 🚀 Applications
 
 ### 1. Customer App (`customer-app/`)
-- Port: 5179
-- URL: http://localhost:5179/
-- Features:
+- **Port**: 8081
+- **URL**: http://localhost:8081/
+- **Features**:
   - User authentication (login/signup)
   - Browse restaurants and dishes
   - Cart management
@@ -28,9 +28,9 @@ food-delivery-platform/
   - Community features
 
 ### 2. Cook App (`cook-app/`)
-- Port: 5178
-- URL: http://localhost:5178/
-- Features:
+- **Port**: 8080
+- **URL**: http://localhost:8080/
+- **Features**:
   - Cook onboarding and KYC verification
   - Menu management
   - Order management
@@ -38,40 +38,40 @@ food-delivery-platform/
   - Profile management
 
 ### 3. Admin Portal (`admin-portal/`)
-- Port: 5176
-- URL: http://localhost:5176/
-- Features:
+- **Port**: 5174
+- **URL**: http://localhost:5174/
+- **Features**:
   - User management
   - Order management
   - Cook management
   - Analytics and reports
   - Real-time dashboard
 
-## 🧰 Tech Stack
+## 🛠️ Tech Stack
 
-- Frontend: React 18 + TypeScript + Vite + TailwindCSS
-- Backend: Firebase (Authentication, Firestore, Storage)
-- UI Components: Radix UI + Lucide React icons
-- State Management: React Context API
-- Real-time: Firebase onSnapshot listeners
-- Authentication: Firebase Auth
+- **Frontend**: React 18 + TypeScript + Vite + TailwindCSS
+- **Backend**: Firebase (Authentication, Firestore, Storage)
+- **UI Components**: Radix UI + Lucide React icons
+- **State Management**: React Context API
+- **Real-time**: Firebase onSnapshot listeners
+- **Authentication**: Firebase Auth with role-based access
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 18+ 
 - npm or yarn
 - Firebase project setup
 
 ### Installation
 
-1. Clone the repository
+1. **Clone the repository**
    ```bash
    git clone https://github.com/guytech110/food-delivery-platform.git
    cd food-delivery-platform
    ```
 
-2. Install dependencies for all apps
+2. **Install dependencies for all apps**
    ```bash
    # Customer App
    cd customer-app && npm install && cd ..
@@ -83,12 +83,12 @@ food-delivery-platform/
    cd admin-portal && npm install && cd ..
    ```
 
-3. Set up Firebase
+3. **Set up Firebase**
    - Create a Firebase project
    - Enable Authentication, Firestore, and Storage
-   - Copy `.env.example` to `.env.local` in each app and fill in the values (see below)
+   - Add your Firebase config to each app's `lib/firebase.ts`
 
-4. Start the applications
+4. **Start the applications**
    ```bash
    # Terminal 1: Customer App
    cd customer-app && npm run dev
@@ -102,126 +102,45 @@ food-delivery-platform/
 
 ## 📱 Access Points
 
-- Customer App: http://localhost:5179/
-- Cook App: http://localhost:5178/
-- Admin Portal: http://localhost:5176/
+- **Customer App**: http://localhost:8081/
+- **Cook App**: http://localhost:8080/
+- **Admin Portal**: http://localhost:5174/
 
-## 🔐 Security and Environment Setup
+## 🔐 Authentication
 
-All apps share the same Firebase project configuration and rely on environment variables prefixed with `VITE_`.
+### Admin Portal Login
+- **Email**: admin@hometaste.com
+- **Password**: (your admin password)
 
-- Copy `.env.example` to `.env.local` in each app directory and populate:
-  - `VITE_FIREBASE_API_KEY`
-  - `VITE_FIREBASE_AUTH_DOMAIN`
-  - `VITE_FIREBASE_PROJECT_ID`
-  - `VITE_FIREBASE_STORAGE_BUCKET`
-  - `VITE_FIREBASE_MESSAGING_SENDER_ID`
-  - `VITE_FIREBASE_APP_ID`
-  - `VITE_FIREBASE_MEASUREMENT_ID` (optional)
-  - `VITE_GOOGLE_MAPS_API_KEY` (cook and customer apps only)
-- `.env*` files are ignored by git across all apps.
-- No API keys are hardcoded in the repo; Vite injects them at build time.
+### Test Users
+- Customer accounts can be created through the signup flow
+- Cook accounts require KYC verification through the cook app
 
-### Google Maps API Key
-- Set `VITE_GOOGLE_MAPS_API_KEY` only in environments that use maps (cook and customer apps).
-- Do not paste raw keys in source. Search for accidental leaks using:
-  ```bash
-  git ls-files | xargs grep -n "AIza" || true
-  ```
-- Restrict the key in Google Cloud Console to the app domains and required APIs.
+## 🗄️ Database Structure
 
-### Firebase Security Rules
-See `firebase/firestore.rules` and `firebase/storage.rules` for the full rules. Summary:
+### Firebase Collections
+- `users` - Customer accounts
+- `cooks` - Cook/restaurant accounts
+- `admins` - Admin accounts
+- `orders` - Order data
+- `menus` - Restaurant menus
+- `analytics` - Platform analytics
 
-- Firestore
-  - Users/cooks can read/write only their own document.
-  - Orders readable/writable by order participants (customer/cook) and admins.
-  - Admins are recognized if they have a document under `admins/{uid}` with role in `['admin','super_admin']` OR a `users/{uid}` document with role `admin`.
-  - `menuItems` readable by anyone; only owning cook (by `cookId`) or admins can write.
-  - `cookVerifications` readable/writable by the cook owner and admins.
-  - Notifications restricted to the intended `userId` and to participants when tied to an order.
-- Storage
-  - Uploads restricted to `uploads/{userId}/**` with a 5MB size limit and `image/*` content type.
-  - Reads allowed for the owner or admins; broad lists allowed only for admins.
-  - All other paths are denied by default.
+## 🚀 Development
 
-Deploy rules with Firebase CLI:
-```bash
-npm i -g firebase-tools
-firebase login
-firebase use <your-project-id>
-firebase deploy --only firestore:rules,storage:rules
-```
+### Adding Features
+Each app is independent and can be developed separately. Common patterns:
 
-### Shared Firebase Config
-- All apps import config from environment variables and must point to the same project ID.
-- Verify by checking each app's `client/lib/firebase.ts` or `src/lib/firebase.ts`.
+1. **New Page**: Add to `pages/` directory
+2. **New Component**: Add to `components/` directory
+3. **New Context**: Add to `contexts/` directory
+4. **API Integration**: Use Firebase services
 
-## 🧪 Operational Checks
-
-Before committing or deploying:
-- [ ] No `.env` files are tracked (`git ls-files | grep -E "\.env(\.|$)"` should be empty)
-- [ ] No API keys are hardcoded (`grep -R "AIza" .` returns nothing)
-- [ ] All three apps use the same `VITE_FIREBASE_PROJECT_ID`
-- [ ] Google Maps key is only referenced via `VITE_GOOGLE_MAPS_API_KEY`
-- [ ] Firestore and Storage rules deployed to the active project
-- [ ] Upload paths are prefixed with authenticated `userId` and include `contentType`
-
-## ☁️ Deploying to Vercel
-
-Each app can be deployed as a separate Vercel project. Recommended settings:
-
-- Framework Preset: Vite
-- Root Directory: app folder (e.g., `customer-app`)
-- Build Command: `npm run build`
-- Output Directory: `dist/spa`
-- Development Command: `npm run dev`
-- Install Command: `npm install`
-- Ignore Build Step: leave blank
-- Environment Variables: add the same `VITE_*` variables as your `.env.local`
-
-API Routes:
-- We provide a minimal Express-based handler at `api/index.ts` in each app.
-- Vercel will build it as an Edge/Serverless Function exposed at `/api/*`.
-- Test after deploy: `/api/health` (admin) or `/api/ping`/`/api/demo` (cook/customer).
-
-Monorepo hints:
-- Create three separate projects in Vercel, each pointing to one of: `admin-portal`, `cook-app`, `customer-app` as the root.
-- Alternatively, add three Vercel projects connected to the same repo and set each root accordingly.
-
-## Vercel deployment and environment variables
-
-Each app (admin-portal, cook-app, customer-app) is linked to a separate Vercel project.
-
-Dev ports
-- admin-portal: http://localhost:5176
-- cook-app: http://localhost:5178
-- customer-app: http://localhost:5179
-
-Local envs
-- Place app-specific secrets in each app's `.env.local`. These are consumed by Vite as `import.meta.env.VITE_*`.
-- Example keys: `VITE_FIREBASE_*`, optionally `VITE_GOOGLE_MAPS_API_KEY`, and `VITE_APP_CHECK_*`.
-
-Vercel envs
-- Use the Vercel CLI to manage envs per app and environment:
-  - Pull: `vercel env pull .env.vercel.development --environment=development`
-  - Push: `vercel env push .env.vercel.production --environment=production`
-- We commit only `.env.example` files. Real secrets live in Vercel or local `.env.local`.
-
-API routes
-- Lightweight Express handlers exist in `/api/index.ts` per app; they are built with `@vercel/node` via each app's `vercel.json`.
-
-Migration from Netlify
-- All Netlify config and functions were removed. Use Vercel projects, `vercel.json`, and Vercel CLI for deploys.
-
-## 🧭 Development Notes
-
-- Each app is independent and can be developed separately. Common patterns:
-  1. New Page → `pages/`
-  2. New Component → `components/`
-  3. New Context → `contexts/`
-  4. API Integration → Firebase services
-- Code style: TypeScript, TailwindCSS, React hooks, Firebase SDK.
+### Code Style
+- TypeScript throughout
+- TailwindCSS for styling
+- React hooks for state management
+- Firebase for backend services
 
 ## 📊 Roadmap
 

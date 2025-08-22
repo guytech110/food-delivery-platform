@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { logger } from "@/lib/logger";
 
 const Earnings: React.FC = () => {
   const navigate = useNavigate();
@@ -19,7 +18,7 @@ const Earnings: React.FC = () => {
 
   const confirmCashOut = () => {
     // Handle cash out logic
-    logger.log("Processing cash out...");
+    console.log("Processing cash out...");
     setShowCashOutModal(false);
   };
 

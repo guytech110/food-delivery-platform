@@ -1,7 +1,6 @@
 import { createVeriffFrame, MESSAGES } from '@veriff/incontext-sdk';
 import { doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { logger } from '@/lib/logger';
 
 // Veriff configuration
 const VERIFF_PUBLIC_KEY = 'cbccf64e-fa26-4981-acd3-0219dc109f6f';
@@ -114,7 +113,7 @@ class VeriffService {
   async launchVerification(sessionId: string): Promise<void> {
     try {
       // TODO: Integrate with actual Veriff SDK when we have the correct API
-      logger.log('Launching verification for session:', sessionId);
+      console.log('Launching verification for session:', sessionId);
       
       // For now, we'll redirect to manual verification
       // This will be replaced with actual Veriff SDK integration
@@ -192,8 +191,8 @@ class VeriffService {
   createVeriffFrame(containerId: string) {
     try {
       return createVeriffFrame({
-        url: 'https://station.veriff.com',
-        // Additional parameters can be added when integrating SDK fully
+        // Note: The actual API parameters need to be determined from Veriff documentation
+        // For now, we'll use a basic setup
       });
     } catch (error) {
       console.error('Error creating Veriff frame:', error);
@@ -214,4 +213,4 @@ class VeriffService {
 }
 
 export const veriffService = new VeriffService();
-export default veriffService;
+export default veriffService; 

@@ -15,7 +15,6 @@ import {
 import { db } from '../lib/firebase';
 import { useAuth } from './AuthContext';
 import { NotificationType } from './NotificationContext';
-import { logger } from '@/lib/logger';
 
 // Order interfaces
 export interface OrderItem {
@@ -279,7 +278,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({ children }) => {
 
   // Subscribe to cook orders (real-time)
   const subscribeToCookOrders = (cookId: string) => {
-    logger.log('Cook App - Setting up cook orders listener for cookId:', cookId);
+    console.log('Cook App - Setting up cook orders listener for cookId:', cookId);
     
     const q = query(
       collection(db, 'orders'),
@@ -293,7 +292,7 @@ export const OrderProvider: React.FC<OrderProviderProps> = ({ children }) => {
         ...doc.data()
       })) as Order[];
       
-      logger.log('Cook App - Cook orders received:', orders);
+      console.log('Cook App - Cook orders received:', orders);
       setCookOrders(orders);
     });
 
@@ -324,4 +323,4 @@ export const useOrders = (): OrderContextType => {
     throw new Error('useOrders must be used within an OrderProvider');
   }
   return context;
-};
+}; 

@@ -13,19 +13,9 @@
     "build:cook": "cd cook-app && npm run build",
     "build:admin": "cd admin-portal && npm run build",
     "build:all": "npm run build:customer && npm run build:cook && npm run build:admin",
-    "clean": "rm -rf node_modules && cd customer-app && rm -rf node_modules && cd ../cook-app && rm -rf node_modules && cd ../admin-portal && rm -rf node_modules",
-    "firebase:login": "cd firebase && firebase login --no-localhost",
-    "firebase:use": "cd firebase && firebase use hometaste-aaba7",
-    "deploy:rules": "cd firebase && firebase deploy --only firestore:rules,storage:rules --project hometaste-aaba7"
+    "clean": "rm -rf node_modules && cd customer-app && rm -rf node_modules && cd ../cook-app && rm -rf node_modules && cd ../admin-portal && rm -rf node_modules"
   },
-  "keywords": [
-    "food-delivery",
-    "react",
-    "typescript",
-    "firebase",
-    "tailwindcss",
-    "vite"
-  ],
+  "keywords": ["food-delivery", "react", "typescript", "firebase", "tailwindcss", "vite"],
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {

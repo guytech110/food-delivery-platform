@@ -18,9 +18,7 @@
     "start": "node dist/server/node-build.mjs",
     "test": "vitest --run",
     "format.fix": "prettier --write .",
-    "typecheck": "tsc",
-    "vercel-build": "npm run build",
-    "vercel-dev": "vercel dev --local-config vercel.json"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",

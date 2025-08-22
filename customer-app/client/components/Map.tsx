@@ -145,7 +145,7 @@ const Map: React.FC<MapProps> = ({
 
   return (
     <div className="relative">
-      <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string}>
+      <LoadScript googleMapsApiKey="AIzaSyAx7l1PEW3C45-D2Gc66N-Ye7O9jjXSJEg">
         <GoogleMap
           mapContainerStyle={mapContainerStyle}
           center={userLocation || center}
@@ -238,4 +238,4 @@ const Map: React.FC<MapProps> = ({
   );
 };
 
-export default Map;
+export default Map; 

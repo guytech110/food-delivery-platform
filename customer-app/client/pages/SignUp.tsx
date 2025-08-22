@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext"; // added back to use context signup
+import { useAuth } from "../contexts/AuthContext";
 
 export default function SignUp() {
   const navigate = useNavigate();
-  const { signup } = useAuth(); // use context signup which eagerly sets user
+  const { signup } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,13 +31,14 @@ export default function SignUp() {
 
     try {
       const result = await signup(name, email, password);
+      
       if (result.success) {
-        navigate("/allergy-selection", { replace: true });
+        // After successful signup, redirect removed (handled by signup flow / routing)
       } else {
         setError(result.message);
       }
-    } catch {
-      setError('An unexpected error occurred. Please try again.');
+    } catch (error) {
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

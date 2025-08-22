@@ -5,7 +5,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { MapPin } from "lucide-react";
-import { logger } from '@/lib/logger';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -39,10 +38,10 @@ const Orders = () => {
 
   useEffect(() => {
     if (user) {
-      logger.log('Customer Orders.tsx - Setting up listener for user:', user.id);
+      console.log('Customer Orders.tsx - Setting up listener for user:', user.id);
       const unsubscribe = subscribeToCustomerOrders(user.id);
       return () => {
-        logger.log('Customer Orders.tsx - Cleaning up listener for user:', user.id);
+        console.log('Customer Orders.tsx - Cleaning up listener for user:', user.id);
         unsubscribe();
       };
     }
@@ -100,10 +99,10 @@ const Orders = () => {
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h3 className="font-semibold text-gray-900 font-urbanist">
-                        {order.cookName}
+                        {order.restaurantName}
                       </h3>
                       <p className="text-sm text-gray-600 font-urbanist">
-                        #{order.id.slice(-6)} • {order.createdAt?.toDate?.()?.toLocaleString?.() || 'N/A'}
+                        {order.orderId} • {order.orderDate}
                       </p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium font-urbanist ${getStatusColor(order.status)}`}>
@@ -180,10 +179,10 @@ const Orders = () => {
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <h3 className="font-semibold text-gray-900 font-urbanist">
-                        {order.cookName}
+                        {order.restaurantName}
                       </h3>
                       <p className="text-sm text-gray-600 font-urbanist">
-                        #{order.id.slice(-6)} • {order.createdAt?.toDate?.()?.toLocaleString?.() || 'N/A'}
+                        {order.orderId} • {order.orderDate}
                       </p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium font-urbanist ${getStatusColor(order.status)}`}>

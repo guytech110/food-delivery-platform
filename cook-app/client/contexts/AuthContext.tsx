@@ -5,8 +5,7 @@ import {
   signOut, 
   onAuthStateChanged,
   User as FirebaseUser,
-  updateProfile,
-  deleteUser
+  updateProfile
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -26,8 +25,6 @@ export interface Cook {
   // Onboarding status
   applicationCompleted?: boolean | undefined;
   onboardingCompleted?: boolean;
-  // Application data for admin review
-  applicationData?: any;
 }
 
 // Authentication context interface
@@ -67,7 +64,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Check if user has a role and it's 'cook'
           if (!cookData || cookData.role !== 'cook') {
-            // Do not force sign-out here; just consider unauthenticated in UI
+            // User is not a cook, sign them out
+            await signOut(auth);
             setCook(null);
             setIsLoading(false);
             return;
@@ -90,13 +88,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setCook(cook);
         } catch (error) {
           console.error('Error fetching cook data:', error);
-          // If error, don't force signout
+          // If error, sign out the user
+          await signOut(auth);
           setCook(null);
         }
       } else {
         setCook(null);
       }
-      setIsLoading(false); // only flip false after auth callback finishes fetching profile
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -105,58 +104,67 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Real Firebase login
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
     setIsLoading(true);
+    
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Role checks remain; do NOT set isLoading(false) here on success – wait for onAuthStateChanged
-      const uid = auth.currentUser!.uid;
-      const cookDoc = await getDoc(doc(db, 'cooks', uid));
+      
+      // Check user role after login
+      const cookDoc = await getDoc(doc(db, 'cooks', auth.currentUser!.uid));
       const cookData = cookDoc.data();
+      
       if (!cookData || cookData.role !== 'cook') {
-        const userDoc = await getDoc(doc(db, 'users', uid));
-        userDoc.data();
         await signOut(auth);
-        // No auth state change to an authenticated cook; onAuthStateChanged will fire (user signed out) so allow it to flip loading false.
-        return { success: false, message: 'Sign-in not permitted for this application.' };
+        return { 
+          success: false, 
+          message: 'This account is for customers. Please use the customer app to login.' 
+        };
       }
+      
       return { success: true, message: 'Login successful' };
     } catch (error: any) {
-      // Failed login will NOT trigger onAuthStateChanged; safe to end loading here
-      setIsLoading(false);
       let message = 'Login failed';
-      if (error.code === 'auth/user-not-found') message = 'No account found with this email';
-      else if (error.code === 'auth/wrong-password') message = 'Incorrect password';
-      else if (error.code === 'auth/invalid-email') message = 'Invalid email address';
+      if (error.code === 'auth/user-not-found') {
+        message = 'No account found with this email';
+      } else if (error.code === 'auth/wrong-password') {
+        message = 'Incorrect password';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Invalid email address';
+      }
       return { success: false, message };
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Real Firebase signup
   const signup = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
     setIsLoading(true);
+    
     try {
+      // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
-      try {
-        await updateProfile(firebaseUser, { displayName: name });
-        await setDoc(doc(db, 'cooks', firebaseUser.uid), {
-          name: name,
-          email: email,
-          role: 'cook',
-          cuisineSpecialty: '',
-          experience: '',
-          location: '',
-          priceRange: '',
-          isVerified: false,
-          phoneNumber: '',
-          applicationCompleted: false,
-          onboardingCompleted: false,
-          createdAt: new Date()
-        });
-      } catch (profileErr: any) {
-        try { await deleteUser(firebaseUser); } catch {}
-        throw profileErr;
-      }
-      // Manually set local state (ok) but keep loading true until onAuthStateChanged fires
+
+      // Update display name
+      await updateProfile(firebaseUser, { displayName: name });
+
+      // Create cook document in Firestore with cook role
+      await setDoc(doc(db, 'cooks', firebaseUser.uid), {
+        name: name,
+        email: email,
+        role: 'cook',
+        cuisineSpecialty: '',
+        experience: '',
+        location: '',
+        priceRange: '',
+        isVerified: false,
+        phoneNumber: '',
+        applicationCompleted: false,
+        onboardingCompleted: false,
+        createdAt: new Date()
+      });
+
+      // Manually set the cook state since onAuthStateChanged might not trigger immediately
       const cook: Cook = {
         id: firebaseUser.uid,
         name: name,
@@ -172,58 +180,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         onboardingCompleted: false
       };
       setCook(cook);
+
       return { success: true, message: 'Account created successfully' };
     } catch (error: any) {
-      // Error paths that do NOT produce a successful auth state change must clear loading here
-      if (error?.code === 'auth/email-already-in-use') {
-        try {
-          await signInWithEmailAndPassword(auth, email, password);
-          const uid = auth.currentUser!.uid;
-          const existingCookDoc = await getDoc(doc(db, 'cooks', uid));
-          if (!existingCookDoc.exists()) {
-            await setDoc(doc(db, 'cooks', uid), {
-              name,
-              email,
-              role: 'cook',
-              cuisineSpecialty: '',
-              experience: '',
-              location: '',
-              priceRange: '',
-              isVerified: false,
-              phoneNumber: '',
-              applicationCompleted: false,
-              onboardingCompleted: false,
-              createdAt: new Date()
-            });
-          }
-          setCook({
-            id: uid,
-            name,
-            email,
-            role: 'cook',
-            cuisineSpecialty: '',
-            experience: '',
-            location: '',
-            priceRange: '',
-            isVerified: false,
-            phoneNumber: '',
-            applicationCompleted: false,
-            onboardingCompleted: false,
-          });
-          // Successful sign-in -> onAuthStateChanged will flip loading false
-          return { success: true, message: 'Profile created for existing account' };
-        } catch (linkErr: any) {
-          setIsLoading(false); // failed path
-          const msg = linkErr?.code === 'auth/wrong-password' ? 'Email already in use. Please use the correct password for this account.' : 'Could not create profile for existing account.';
-          return { success: false, message: msg };
-        }
-      }
-      setIsLoading(false); // generic failure
       let message = 'Signup failed';
-      if (error.code === 'auth/weak-password') message = 'Password should be at least 6 characters';
-      else if (error.code === 'auth/invalid-email') message = 'Invalid email address';
-      else if (error.code === 'permission-denied') message = 'Permission denied creating profile. Please contact support.';
+      if (error.code === 'auth/email-already-in-use') {
+        message = 'An account with this email already exists';
+      } else if (error.code === 'auth/weak-password') {
+        message = 'Password should be at least 6 characters';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Invalid email address';
+      }
       return { success: false, message };
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -277,4 +247,4 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}; 

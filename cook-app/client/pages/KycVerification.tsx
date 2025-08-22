@@ -326,7 +326,7 @@ export default function KycVerification() {
         {/* Skip Button */}
         <Button
           variant="ghost"
-          onClick={() => navigate("/cook-application/step-1")}
+          onClick={() => navigate("/cook-application")}
           className="w-full h-[60px] text-[#565b66] opacity-60 font-semibold text-base capitalize hover:opacity-80"
           style={{
             fontFamily:

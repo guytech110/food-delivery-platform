@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { createRoot } from "react-dom/client";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { OrderProvider } from "./contexts/OrderContext";
 import { MenuProvider } from "./contexts/MenuContext";
@@ -34,8 +34,6 @@ import OrderDetails from "./pages/OrderDetails";
 import Earnings from "./pages/Earnings";
 import Profile from "./pages/Profile";
 import Community from "./pages/Community";
-import ProtectedRoute from "./components/ProtectedRoute";
-import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -46,192 +44,47 @@ const App = () => (
         <OrderProvider>
           <MenuProvider>
             <NotificationProvider>
-              <ErrorBoundary>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <div className="bg-white">
-                    <Routes>
-                      {/* Public routes */}
-                      <Route path="/" element={<LandingPage />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/signup" element={<Signup />} />
-
-                      {/* Auth-protected routes */}
-                      <Route
-                        path="/onboarding"
-                        element={
-                          <ProtectedRoute>
-                            <Onboarding />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/kyc"
-                        element={
-                          <ProtectedRoute>
-                            <KycVerification />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/kyc/identity"
-                        element={
-                          <ProtectedRoute>
-                            <KycIdentity />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/kyc/selfie"
-                        element={
-                          <ProtectedRoute>
-                            <KycSelfie />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/kyc/kitchen"
-                        element={
-                          <ProtectedRoute>
-                            <KycKitchen />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/kyc/camera/:documentType"
-                        element={
-                          <ProtectedRoute>
-                            <KycCamera />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/cook-application"
-                        element={
-                          <ProtectedRoute>
-                            <Navigate to="/cook-application/step-1" replace />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/cook-application/step-1"
-                        element={
-                          <ProtectedRoute>
-                            <CookApplicationStep1 />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/cook-application/step-2"
-                        element={
-                          <ProtectedRoute>
-                            <CookApplicationStep2 />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/cook-application/step-3"
-                        element={
-                          <ProtectedRoute>
-                            <CookApplicationStep3 />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/application-success"
-                        element={
-                          <ProtectedRoute>
-                            <ApplicationSuccess />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/new-item"
-                        element={
-                          <ProtectedRoute>
-                            <NewItem />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/edit-item/:itemId"
-                        element={
-                          <ProtectedRoute>
-                            <EditItem />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/delivery-tracking/:orderId"
-                        element={
-                          <ProtectedRoute>
-                            <DeliveryTracking />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/menu"
-                        element={
-                          <ProtectedRoute>
-                            <Menu />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/orders"
-                        element={
-                          <ProtectedRoute>
-                            <Orders />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/order-details/:orderId"
-                        element={
-                          <ProtectedRoute>
-                            <OrderDetails />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/earnings"
-                        element={
-                          <ProtectedRoute>
-                            <Earnings />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/profile"
-                        element={
-                          <ProtectedRoute>
-                            <Profile />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/community"
-                        element={
-                          <ProtectedRoute>
-                            <Community />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/dashboard"
-                        element={
-                          <ProtectedRoute>
-                            <Index />
-                          </ProtectedRoute>
-                        }
-                      />
-                      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </div>
-                </BrowserRouter>
-              </ErrorBoundary>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/kyc" element={<KycVerification />} />
+          <Route path="/kyc/identity" element={<KycIdentity />} />
+          <Route path="/kyc/selfie" element={<KycSelfie />} />
+          <Route path="/kyc/kitchen" element={<KycKitchen />} />
+          <Route path="/kyc/camera/:documentType" element={<KycCamera />} />
+          <Route path="/cook-application" element={<CookApplicationStep1 />} />
+          <Route
+            path="/cook-application/step-1"
+            element={<CookApplicationStep1 />}
+          />
+          <Route
+            path="/cook-application/step-2"
+            element={<CookApplicationStep2 />}
+          />
+          <Route
+            path="/cook-application/step-3"
+            element={<CookApplicationStep3 />}
+          />
+          <Route path="/application-success" element={<ApplicationSuccess />} />
+          <Route path="/new-item" element={<NewItem />} />
+          <Route path="/edit-item/:itemId" element={<EditItem />} />
+          <Route path="/delivery-tracking/:orderId" element={<DeliveryTracking />} />
+          <Route path="/menu" element={<Menu />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/order-details/:orderId" element={<OrderDetails />} />
+          <Route path="/earnings" element={<Earnings />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/community" element={<Community />} />
+          <Route path="/dashboard" element={<Index />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
             </NotificationProvider>
           </MenuProvider>
         </OrderProvider>

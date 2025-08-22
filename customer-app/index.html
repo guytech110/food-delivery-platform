@@ -20,6 +20,34 @@
       href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400&display=swap"
       rel="stylesheet"
     />
+    <!-- Early diagnostic instrumentation -->
+    <script>
+      window.__APP_DIAG_START__ = Date.now();
+      console.log('[Diag] index.html inline script ran at', new Date().toISOString());
+      (function(){
+        try {
+          const origLog = console.log;
+          if(!window.__ORIG_CONSOLE_LOG__) {
+            window.__ORIG_CONSOLE_LOG__ = origLog;
+          }
+          // Prefix all console.log output to clearly distinguish
+          console.log = function(...args){ origLog.apply(this, ['[Console]'].concat(args)); };
+          window.addEventListener('error', function(e){
+            origLog('[GlobalError]', e.message, e.filename+':'+e.lineno+':'+e.colno, e.error);
+          });
+          window.addEventListener('unhandledrejection', function(e){
+            origLog('[GlobalRejection]', e.reason);
+          });
+          if(/[?&]authdebug=1/.test(location.search)) {
+            origLog('[Diag] authdebug param detected – detailed auth logs will display.');
+          } else {
+            origLog('[Diag] Add ?authdebug=1 to URL for detailed auth logs.');
+          }
+        } catch(err){
+          try { console.warn('Diag setup failed', err); } catch(_) {}
+        }
+      })();
+    </script>
   </head>
 
   <body>
