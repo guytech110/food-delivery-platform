@@ -68,6 +68,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     dbg('[EffectSetup] registering onAuthStateChanged listener');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      // Top-level instrumentation
+      console.log('[auth] onAuthStateChanged fired', { uid: firebaseUser?.uid || null });
       dbg('onAuthStateChanged fired', { uid: firebaseUser?.uid });
       if (firebaseUser) {
         try {
@@ -98,6 +100,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setUser(null);
             setIsLoading(false);
             provisioningRef.current = false;
+            // Log and exit early
+            console.log('[auth] state', { authReady: true, isLoading: false, user: false });
             return;
           }
           const mergedUser: User = {
@@ -129,6 +133,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
       }
       setIsLoading(false);
+      // Bottom-level instrumentation
+      try {
+        const authReady = true;
+        console.log('[auth] state', { authReady, isLoading: false, user: !!(firebaseUser) });
+      } catch (e) {
+        console.error('[auth] state log failed', e);
+      }
     });
     return () => {
       dbg('[EffectCleanup] unmounting auth listener');
@@ -164,25 +175,52 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signup = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
     if (authDebug) dbg('signup() called', { email });
     setIsLoading(true);
-    
     try {
       // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
 
+      console.log('[signup] created', { uid: firebaseUser.uid, email });
+
       // Update display name
       await updateProfile(firebaseUser, { displayName: name });
 
       // Create user document in Firestore with customer role
-      await setDoc(doc(db, 'users', firebaseUser.uid), {
-        name: name,
-        email: email,
-        role: 'customer',
-        allergies: [],
-        deliveryAddress: '',
-        phoneNumber: '',
-        createdAt: new Date()
-      });
+      try {
+        console.log('[signup] writing user doc', { uid: firebaseUser.uid });
+        await setDoc(doc(db, 'users', firebaseUser.uid), {
+          name: name,
+          email: email,
+          role: 'customer',
+          allergies: [],
+          deliveryAddress: '',
+          phoneNumber: '',
+          createdAt: new Date()
+        });
+        console.log('[signup] user doc written');
+      } catch (e) {
+        console.error('[signup] setDoc failed', e);
+      }
+
+      // Set a minimal local user so UI can proceed immediately
+      try {
+        const localUser: User = {
+          id: firebaseUser.uid,
+          name,
+          email,
+          role: 'customer'
+        };
+        setUser(localUser);
+        console.log('[signup] local user set');
+      } catch (e) {
+        console.error('[signup] setUser failed', e);
+      }
+
+      // Navigate to a protected onboarding page instead of /login
+      if (typeof window !== 'undefined') {
+        window.location.assign('/allergy-selection');
+      }
+
       if (authDebug) dbg('signup provisioning complete, redirect should follow in page logic');
       return { success: true, message: 'Account created successfully' };
     } catch (error: any) {
@@ -202,16 +240,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Real Firebase logout
   const logout = async () => {
-    if (authDebug) dbg('logout() called');
     try {
       await signOut(auth);
-    } catch (error) {
-      ((window as any).__ORIG_CONSOLE_LOG__ || console.error).call(console, 'Error logging out:', error);
+    } catch (e) {
+      console.error('[logout] signOut failed', e);
     } finally {
-      clearAuthBypass();
-      if (typeof window !== 'undefined') {
-        window.location.assign('/login');
-      }
+      setUser(null);
+      try { clearAuthBypass?.(); } catch {}
+      if (typeof window !== 'undefined') window.location.assign('/login');
     }
   };
 

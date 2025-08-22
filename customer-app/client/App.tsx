@@ -11,6 +11,7 @@ import { CartProvider } from "./contexts/CartContext";
 import { OrderProvider } from "./contexts/OrderContext";
 import { MenuProvider } from "./contexts/MenuContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
+import { maybeEnableBypassFromQuery } from "./lib/authBypass";
 // Removed ProtectedRoute
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -31,8 +32,13 @@ import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 import Search from "./pages/Search";
 import CookProfile from "./pages/CookProfile";
+import AuthDebug from "./pages/AuthDebug";
+import PublicRoute from "./components/PublicRoute";
 
 const queryClient = new QueryClient();
+
+// Initialize auth bypass check at app boot
+maybeEnableBypassFromQuery();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -47,9 +53,10 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<SignUp />} />
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
               <Route path="/allergy-selection" element={<AllergySelection />} />
+              <Route path="/auth-debug" element={<AuthDebug />} />
               <Route path="/home" element={<Home />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/orders" element={<Orders />} />
