@@ -1,4 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+
+// Added early execution marker
+if (typeof window !== 'undefined') {
+  // @ts-ignore
+  (window as any).__AUTH_CONTEXT_FILE_LOADED__ = (window as any).__AUTH_CONTEXT_FILE_LOADED__ ? (window as any).__AUTH_CONTEXT_FILE_LOADED__ + 1 : 1;
+  const _fileLoadAuthDebug = /authdebug=1/.test(window.location.search);
+  const _fileLoadLog = (...a: any[]) => { if (_fileLoadAuthDebug) (window as any).__ORIG_CONSOLE_LOG__ ? (window as any).__ORIG_CONSOLE_LOG__.apply(console, ['[Auth][FileLoad]'].concat(a)) : console.log('[Auth][FileLoad]', ...a); };
+  _fileLoadLog('AuthContext module evaluated count=', (window as any).__AUTH_CONTEXT_FILE_LOADED__, 'at', new Date().toISOString());
+}
+
+// Global debug helpers (used across handlers)
+const authDebug = typeof window !== 'undefined' && /authdebug=1/.test(typeof window !== 'undefined' ? window.location.search : '');
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const dbg = (...a: any[]) => { if (authDebug) ((window as any).__ORIG_CONSOLE_LOG__ || console.log).apply(console, ['[Auth]'].concat(a)); };
+
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -9,6 +24,7 @@ import {
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { clearAuthBypass } from '../lib/authBypass';
 
 // User interface
 export interface User {
@@ -50,17 +66,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Listen for Firebase auth state changes
   useEffect(() => {
+    dbg('[EffectSetup] registering onAuthStateChanged listener');
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      console.log('[Auth] onAuthStateChanged fired', { uid: firebaseUser?.uid });
+      dbg('onAuthStateChanged fired', { uid: firebaseUser?.uid });
       if (firebaseUser) {
         try {
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDoc = await getDoc(userDocRef);
-          console.log('[Auth] userDoc exists?', userDoc.exists());
+          dbg('userDoc exists?', userDoc.exists());
           const userData = userDoc.data();
-          console.log('[Auth] userData', userData);
+            dbg('userData', userData);
           if (!userDoc.exists()) {
-            console.log('[Auth] provisioning new user doc');
+            dbg('provisioning new user doc');
             provisioningRef.current = true;
             await setDoc(userDocRef, {
               name: firebaseUser.displayName || 'User',
@@ -74,9 +91,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
           const finalDoc = provisioningRef.current ? await getDoc(userDocRef) : userDoc;
           const finalData = finalDoc.data();
-          console.log('[Auth] finalData after provisioning', finalData);
+          dbg('finalData after provisioning', finalData);
           if (finalData && finalData.role && finalData.role !== 'customer') {
-            console.log('[Auth] role mismatch -> signOut');
+            dbg('role mismatch -> signOut');
             await signOut(auth);
             setUser(null);
             setIsLoading(false);
@@ -92,13 +109,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             deliveryAddress: finalData?.deliveryAddress || '',
             phoneNumber: finalData?.phoneNumber || ''
           };
-          console.log('[Auth] setting user state', mergedUser);
+          dbg('setting user state', mergedUser);
           setUser(mergedUser);
           provisioningRef.current = false;
         } catch (error) {
-          console.error('Error fetching/provisioning user data:', error);
+          ((window as any).__ORIG_CONSOLE_LOG__ || console.error).call(console, 'Error fetching/provisioning user data:', error);
           if (firebaseUser) {
-            console.log('[Auth] fallback basic user');
+            dbg('fallback basic user');
             setUser({
               id: firebaseUser.uid,
               name: firebaseUser.displayName || 'User',
@@ -108,16 +125,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }
       } else {
-        console.log('[Auth] firebaseUser null -> clearing user');
+        dbg('firebaseUser null -> clearing user');
         setUser(null);
       }
       setIsLoading(false);
     });
-    return () => unsubscribe();
+    return () => {
+      dbg('[EffectCleanup] unmounting auth listener');
+      unsubscribe();
+    };
   }, []);
 
   // Real Firebase login
   const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
+    if (authDebug) dbg('login() called', { email });
     setIsLoading(true);
     
     try {
@@ -141,6 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Real Firebase signup
   const signup = async (name: string, email: string, password: string): Promise<{ success: boolean; message: string }> => {
+    if (authDebug) dbg('signup() called', { email });
     setIsLoading(true);
     
     try {
@@ -161,7 +183,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         phoneNumber: '',
         createdAt: new Date()
       });
-
+      if (authDebug) dbg('signup provisioning complete, redirect should follow in page logic');
       return { success: true, message: 'Account created successfully' };
     } catch (error: any) {
       let message = 'Signup failed';
@@ -180,10 +202,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Real Firebase logout
   const logout = async () => {
+    if (authDebug) dbg('logout() called');
     try {
       await signOut(auth);
     } catch (error) {
-      console.error('Error logging out:', error);
+      ((window as any).__ORIG_CONSOLE_LOG__ || console.error).call(console, 'Error logging out:', error);
+    } finally {
+      clearAuthBypass();
+      if (typeof window !== 'undefined') {
+        window.location.assign('/login');
+      }
     }
   };
 
