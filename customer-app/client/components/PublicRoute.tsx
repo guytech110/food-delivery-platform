@@ -1,17 +1,13 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user /*, authReady*/, isLoading } = useAuth() as any;
-  const location = useLocation(); // moved outside conditional to respect Hooks rules
-  // If you later expose authReady from context, you can gate on it. For now we just ensure not loading.
+  const { user, authReady, isLoading } = useAuth() as any;
+  if (!authReady) return null; // wait for initial auth resolution
   if (isLoading) return null;
-  if (user) {
-    const redirectTo = (location.state as any)?.from || '/home'; // changed from /dashboard to /home
-    return <Navigate to={redirectTo} replace />;
-  }
-  return <>{children}</>; 
+  if (user) return <Navigate to="/home" replace />;
+  return <>{children}</>;
 };
 
 export default PublicRoute;

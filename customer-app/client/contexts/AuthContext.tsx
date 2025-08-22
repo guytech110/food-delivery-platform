@@ -42,6 +42,7 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  authReady: boolean; // added
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
   signup: (name: string, email: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
@@ -59,7 +60,8 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const provisioningRef = useRef(false); // tracks initial provisioning
+  const [authReady, setAuthReady] = useState(false); // added
+  const provisioningRef = useRef(false);
 
   // Check if user is authenticated
   const isAuthenticated = !!user;
@@ -133,6 +135,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
       }
       setIsLoading(false);
+      if (!authReady) setAuthReady(true); // mark ready after first resolution
       // Bottom-level instrumentation
       try {
         const authReady = true;
@@ -271,6 +274,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     isAuthenticated,
     isLoading,
+    authReady, // added
     login,
     signup,
     logout,

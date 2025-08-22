@@ -19,9 +19,9 @@ export default function Login() {
 
     try {
       const result = await login(email, password);
+      
       if (result.success) {
-        // Removed ad-hoc redirect; PublicRoute will handle redirect once user state updates
-        // console.log('[login] success, awaiting auth state redirect');
+        navigate('/home', { replace: true }); // changed from allergy-selection
       } else {
         setError(result.message);
       }

@@ -1,10 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export default function AllergySelection() {
   const navigate = useNavigate();
-  const { updateUser } = useAuth();
+  const { updateUser, user } = useAuth() as any;
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
 
   const allergies = [
@@ -27,18 +29,27 @@ export default function AllergySelection() {
     );
   };
 
-  const handleSave = () => {
-    // Update user allergies in global state
+  const handleSave = async () => {
     updateUser({ allergies: selectedAllergies });
-    // Navigate to home page after allergy selection
-    navigate("/home");
+    if (user?.id) {
+      try {
+        await setDoc(doc(db, 'users', user.id), { allergies: selectedAllergies }, { merge: true });
+      } catch (e) {
+        console.error('[allergy] save failed', e);
+      }
+    }
+    navigate('/home', { replace: true });
   };
-
-  const handleNoAllergies = () => {
-    // Update user allergies as empty array
+  const handleNoAllergies = async () => {
     updateUser({ allergies: [] });
-    // Navigate to home page after allergy selection
-    navigate("/home");
+    if (user?.id) {
+      try {
+        await setDoc(doc(db, 'users', user.id), { allergies: [] }, { merge: true });
+      } catch (e) {
+        console.error('[allergy] skip save failed', e);
+      }
+    }
+    navigate('/home', { replace: true });
   };
 
   return (

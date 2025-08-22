@@ -12,7 +12,6 @@ import { OrderProvider } from "./contexts/OrderContext";
 import { MenuProvider } from "./contexts/MenuContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { maybeEnableBypassFromQuery } from "./lib/authBypass";
-// Removed ProtectedRoute
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -34,6 +33,7 @@ import Search from "./pages/Search";
 import CookProfile from "./pages/CookProfile";
 import AuthDebug from "./pages/AuthDebug";
 import PublicRoute from "./components/PublicRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -55,24 +55,23 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/signup" element={<PublicRoute><SignUp /></PublicRoute>} />
-              <Route path="/allergy-selection" element={<AllergySelection />} />
+              <Route path="/allergy-selection" element={<ProtectedRoute><AllergySelection /></ProtectedRoute>} />
               <Route path="/auth-debug" element={<AuthDebug />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/order-confirmation" element={<OrderConfirmation />} />
-              <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
-              <Route path="/community" element={<Community />} />
-              <Route path="/wallet" element={<Wallet />} />
-              <Route path="/help-support" element={<HelpSupport />} />
-              <Route path="/terms-policies" element={<TermsPolicies />} />
-              <Route path="/subscriptions" element={<Subscriptions />} />
-            <Route path="/personal-info" element={<PersonalInfo />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/cook/:cookId" element={<CookProfile />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
+              <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+              <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmation /></ProtectedRoute>} />
+              <Route path="/order-tracking/:orderId" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
+              <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+              <Route path="/wallet" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+              <Route path="/help-support" element={<ProtectedRoute><HelpSupport /></ProtectedRoute>} />
+              <Route path="/terms-policies" element={<ProtectedRoute><TermsPolicies /></ProtectedRoute>} />
+              <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
+              <Route path="/personal-info" element={<ProtectedRoute><PersonalInfo /></ProtectedRoute>} />
+              <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+              <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+              <Route path="/cook/:cookId" element={<ProtectedRoute><CookProfile /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
               </TooltipProvider>
